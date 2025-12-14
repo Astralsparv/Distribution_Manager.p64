@@ -1,4 +1,4 @@
---[[pod_format="raw",created="2025-12-14 15:05:33",modified="2025-12-14 16:44:02",revision=126]]
+--[[pod_format="raw",created="2025-12-14 15:05:33",modified="2025-12-14 17:09:29",revision=133]]
 gui=create_gui{}
 
 local x,y=2,20
@@ -95,8 +95,12 @@ local w,h=button(gui,{
 		mkdir("/system")
 		
 		flip()
-		notify("Creating the bootloader: Creating boot.lua")
+		notify("Creating the bootloader: Writing bootloader's loader")
 		cp("bootloader/boot.lua","/system/boot.lua")
+		
+		flip()
+		notify("Creating the bootloader: Writing bootloader")
+		cp("bootloader/bootloader.lua","/distributions/bootloader.lua")
 		
 		flip()
 		notify("Restarting your system.")

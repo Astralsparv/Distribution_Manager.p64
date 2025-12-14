@@ -1,6 +1,6 @@
---[[pod_format="raw",created="2025-12-14 15:27:05",modified="2025-12-14 16:27:44",revision=71]]
+--[[pod_format="raw",created="2025-12-14 15:27:05",modified="2025-12-14 16:56:50",revision=75]]
 function internet()
-	return (fetch("https://raw.githubusercontent.com/Astralsparv/picotron-distribution-manager/refs/heads/main/connection_check.txt"):sub(1,7)=="Working")
+	return (fetch("https://raw.githubusercontent.com/Astralsparv/Distribution_Manager.p64/refs/heads/main/connection_test.txt"):sub(1,7)=="Working")
 end
 
 function downloadDistribution(source,label)

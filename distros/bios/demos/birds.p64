@@ -227,9 +227,9 @@ on_event("modified:/ram/shared/windows.pod", function()
 end)
 
 :: .info.pod
---[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 16:51:31",runtime=10,stored="2023-17-21 16:17:13",workspaces={{location="main.lua#13",workspace_index=1},{location="bird.lua#122",workspace_index=1},{location="gfx/0.gfx",workspace_index=2}}]]
+--[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 17:16:03",runtime=10,stored="2023-17-21 16:17:13",workspaces={{location="main.lua#13",workspace_index=1},{location="bird.lua#122",workspace_index=1},{location="gfx/0.gfx",workspace_index=2}}]]
 :: gfx/.info.pod
---[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 16:51:31",stored="2023-16-21 16:16:54"]]
+--[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 17:16:03",stored="2023-16-21 16:16:54"]]
 :: gfx/0.gfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTEwLTIzIDA5OjMwOjM2Iixtb2RpZmllZD0iMjAyNC0w
 OS0wOSAwOToxNDozNiIscmV2aXNpb249OTE1LHN0b3JlZD0iMjAyMy0xMi0wNCAxNjoxMjo1MSJd
@@ -241,7 +241,7 @@ VT8VoA4IWgD-E6AOLQoOgA4ZAh6ADjkEDpAOGgkUDoAOAgoeBA6QHhAO8DVhAB1QNz8VkB5hAEBw
 DgkeYwBAcA4ECWYA-wVgDhQpHoAOBCkOoA4ZDrAOAg7wN30BHg8xAP----------------------
 ---------------------------------------rUG09OH19
 :: map/.info.pod
---[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 16:51:31",stored="2023-16-21 16:16:54"]]
+--[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 17:16:03",stored="2023-16-21 16:16:54"]]
 :: map/0.map
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTMwLTIzIDA5OjMwOjM2Iixtb2RpZmllZD0iMjAyMy0x
 NC0zMCAxMDoxNDowNCIscmV2aXNpb249OTQsc3RvcmVkPSIyMDIzLTEyLTA0IDE2OjEyOjUxIl1d

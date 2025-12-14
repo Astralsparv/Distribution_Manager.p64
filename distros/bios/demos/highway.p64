@@ -92,5 +92,5 @@ function _update()
 	pl.dy *= .98
 end
 :: .info.pod
---[[pod,created="2023-10-15 05:27:17",modified="2025-12-14 16:51:31"]]
+--[[pod,created="2023-10-15 05:27:17",modified="2025-12-14 17:16:03"]]
 :: [eoc]
