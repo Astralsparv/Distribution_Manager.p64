@@ -1,4 +1,4 @@
---[[pod_format="raw",created="2025-12-14 16:47:55",modified="2025-12-14 17:33:23",revision=39]]
+--[[pod_format="raw",created="2025-12-14 16:47:55",modified="2025-12-14 19:23:18",revision=42]]
 gui=create_gui{}
 local distributionName="distribution"..flr(rnd(10000))
 
@@ -90,6 +90,16 @@ local w,h=button(gui,{
 		
 		notify("Installed bootloader - reboot for effects to take place")
 		flip()
+	end
+})
+y+=h+15
+
+local w,h=button(gui,{
+	x=x,
+	y=y,
+	label="Exit",
+	tap=function()
+		exit()
 	end
 })
 y+=h

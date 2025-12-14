@@ -1,4 +1,4 @@
---[[pod_format="raw",created="2025-12-14 15:05:33",modified="2025-12-14 17:49:10",revision=142]]
+--[[pod_format="raw",created="2025-12-14 15:05:33",modified="2025-12-14 19:23:16",revision=144]]
 gui=create_gui{}
 
 local x,y=2,20
@@ -124,6 +124,16 @@ local w,h=button(gui,{
 		for i=1, 20 do flip() end
 		
 		send_message(2,{event="reboot"})
+	end
+})
+y+=h+15
+
+local w,h=button(gui,{
+	x=x,
+	y=y,
+	label="Exit",
+	tap=function()
+		exit()
 	end
 })
 y+=h

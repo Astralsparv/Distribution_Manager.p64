@@ -2948,9 +2948,9 @@ end
 
 
 :: .info.pod
---[[pod,author="zep",created="2023-11-15 07:11:30",icon=userdata("u8",16,16,"01010101010101010101010101010101010e0e070707070707070707070e0e01010e0e070107070707070701070e0e01010e0e070107070707070701070e0e01010e0e070707070707070707070e0e01010e0e07070e070707070e07070e1701010e0e0707070e0e0e0e070707171701010e0e07070707070707070707171701010e0e0e0e0e0e0e0e0e0e1717170e01010e0e0e0e0e0e0e0e0e1717170e0e01010e0e0e0e0e0e0e0e1717170e0e0e01010e0e010101010101010101010e0e01010e0e010101010707070707010e0e01010e0e010101010707070707010e0e01010e0e010101010707070707010e010001010101010101010101010101010000"),modified="2025-12-14 18:03:47",notes="(c) Lexaloffle Games LLP",runtime=20,stored="2024-03-24 15:35:56",title="Picotron File Navigator",version="0.1.1d",workspaces={{location="main.lua#39",workspace_index=1},{location="interf.lua#5",workspace_index=1},{location="grid.lua#1",workspace_index=1},{location="drop.lua#1",workspace_index=1},{location="open.lua#1",workspace_index=1},{location="intention.lua#1",workspace_index=1},{location="desktop.lua#1",workspace_index=1},{location="finfo.lua#234",workspace_index=1},{location="list.lua#1",workspace_index=1},{location="gfx/0.gfx",workspace_index=2}}]]
+--[[pod,author="zep",created="2023-11-15 07:11:30",icon=userdata("u8",16,16,"01010101010101010101010101010101010e0e070707070707070707070e0e01010e0e070107070707070701070e0e01010e0e070107070707070701070e0e01010e0e070707070707070707070e0e01010e0e07070e070707070e07070e1701010e0e0707070e0e0e0e070707171701010e0e07070707070707070707171701010e0e0e0e0e0e0e0e0e0e1717170e01010e0e0e0e0e0e0e0e0e1717170e0e01010e0e0e0e0e0e0e0e1717170e0e0e01010e0e010101010101010101010e0e01010e0e010101010707070707010e0e01010e0e010101010707070707010e0e01010e0e010101010707070707010e010001010101010101010101010101010000"),modified="2025-12-14 19:26:09",notes="(c) Lexaloffle Games LLP",runtime=20,stored="2024-03-24 15:35:56",title="Picotron File Navigator",version="0.1.1d",workspaces={{location="main.lua#39",workspace_index=1},{location="interf.lua#5",workspace_index=1},{location="grid.lua#1",workspace_index=1},{location="drop.lua#1",workspace_index=1},{location="open.lua#1",workspace_index=1},{location="intention.lua#1",workspace_index=1},{location="desktop.lua#1",workspace_index=1},{location="finfo.lua#234",workspace_index=1},{location="list.lua#1",workspace_index=1},{location="gfx/0.gfx",workspace_index=2}}]]
 :: gfx/.info.pod
---[[pod,created="2023-11-15 07:11:30",modified="2025-12-14 18:03:47",stored="2023-11-15 07:11:30"]]
+--[[pod,created="2023-11-15 07:11:30",modified="2025-12-14 19:26:09",stored="2023-11-15 07:11:30"]]
 :: gfx/0.gfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTEwLTIwIDA2OjM4OjU2Iixtb2RpZmllZD0iMjAyNS0w
 Ny0yOCAxNTo1MTozNCIscmV2aXNpb249MzE1MCxzdG9yZWQ9IjIwMjMtMzQtMDkgMTk6MzQ6NTMi
@@ -2982,22 +2982,22 @@ AEMgEBAE8PAsZmxhZ3M9MCxwYW5feAgAz3k9MCx6b29tPTh9LDEAKfUBCAgENzAHEBcgBxAnEAcw
 BwQAL1eQRwAuj1eQBwAHAAcgSQAODvIADzEA----------------------------------------
 ------------------------QlBtPTh9fQ==
 :: gfx/delme/.info.pod
---[[pod,created="2023-10-11 07:54:06",modified="2025-12-14 18:03:47",stored="2023-54-11 07:54:06"]]
+--[[pod,created="2023-10-11 07:54:06",modified="2025-12-14 19:26:09",stored="2023-54-11 07:54:06"]]
 :: gfx/delme2/.info.pod
---[[pod,created="2023-02-11 08:02:20",modified="2025-12-14 18:03:47",stored="2023-02-11 08:02:20"]]
+--[[pod,created="2023-02-11 08:02:20",modified="2025-12-14 19:26:09",stored="2023-02-11 08:02:20"]]
 :: gfx/ha/.info.pod
---[[pod,created="2023-09-11 08:09:44",modified="2025-12-14 18:03:47",stored="2023-09-11 08:09:44"]]
+--[[pod,created="2023-09-11 08:09:44",modified="2025-12-14 19:26:09",stored="2023-09-11 08:09:44"]]
 :: gfx/zxc/.info.pod
---[[pod,created="2023-10-11 07:41:41",modified="2025-12-14 18:03:47",stored="2023-41-11 07:41:41"]]
+--[[pod,created="2023-10-11 07:41:41",modified="2025-12-14 19:26:09",stored="2023-41-11 07:41:41"]]
 :: map/.info.pod
---[[pod,created="2024-03-07 10:11:56",modified="2025-12-14 18:03:47",stored="2024-03-07 10:11:56"]]
+--[[pod,created="2024-03-07 10:11:56",modified="2025-12-14 19:26:09",stored="2024-03-07 10:11:56"]]
 :: map/map0.map
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI0LTAzLTA3IDEwOjExOjU2Iixtb2RpZmllZD0iMjAyNC0w
 My0wNyAxMDoxMjowMSIscmV2aXNpb249MV1dbHo0AGkAAACjCAAA8BN7bGF5ZXI9e1swXT17Ym1w
 PXVzZXJkYXRhKCJpMTYiLDE2AwAvIjABAP---__hIikscGFuX3g9MAgA8gZ5PTAsc2NhbGU9MSx0
 aWxlX2g9MTYKAG93PTE2fSxLBP----84UDE2fX19
 :: sfx/.info.pod
---[[pod,created="2024-03-07 10:11:56",modified="2025-12-14 18:03:47",stored="2024-03-07 10:11:56"]]
+--[[pod,created="2024-03-07 10:11:56",modified="2025-12-14 19:26:09",stored="2024-03-07 10:11:56"]]
 :: sfx/sfx0.sfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI0LTAzLTA3IDEwOjExOjU2Iixtb2RpZmllZD0iMjAyNC0w
 My0wNyAxMDoxMjowMSIscmV2aXNpb249MV1dbHo0ABABAABRBwAA8CdweHUAAygAAAMABA9AEAIO
