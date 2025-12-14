@@ -1,0 +1,112 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: main.lua
+--[[pod_format="raw",created="2023-10-28 00:24:36",modified="2024-10-11 21:56:51",revision=1741]]
+--[[
+	pixeldust.p64
+
+	use userdata operation and batch pset call to manage moving
+	and drawing 32k pixels
+]]
+
+local max_pixels = 32768
+
+window{ cursor="crosshair" }
+
+-- pixels. each row: x,y,col,dx,dy
+-- note: the first 3 values are in the same as parameters to pset()
+p = userdata("f64", 5, max_pixels)
+
+
+local idx = 0
+local max_idx = 0
+
+function _draw()
+	cls()
+	
+	poke(0x550b,0x3f) -- if use fillp, want black pixels to be transparent
+	
+--	fillp(~0x1248) -- kinda interesting
+	pset(p)
+	fillp()
+	
+	print("dots:"..max_idx,2,2,13)
+	print("cpu: "..string.format("%.3f",stat(1)),2,12)
+	print(stat(7).."fps",2,24)
+	
+end
+
+function _update() 
+
+	local lmx,lmy = mx or 0, my or 0
+	local ldx,ldy = dx or 0, dy or 0
+	mx,my,mb = mouse()
+	
+	-- make dots
+	dx = (mx - lmx) * 0.15
+	dy = (my - lmy) * 0.15
+	
+	
+	local aa=atan2(dx,dy)
+	if (mb ==1) then
+		
+		-- add 50 particles per frame
+		-- -> dot recycled every 50000/50 frames = ~16 seconds
+		
+		-- lerp between positions / velocities / colours
+		for i=0,0.99,0.02 do 
+		
+			set(p, 0, idx,  lmx+(mx-lmx)*i)
+			set(p, 1, idx,  lmy+(my-lmy)*i)
+			set(p, 2, idx,  16 + ( (laa+(aa-laa)*i +rnd(0.2))%1)*32)
+			set(p, 3, idx,  ldx+(dx-ldx)*i+rnd(0.2)-rnd(0.2))
+			set(p, 4, idx,  ldy+(dy-ldy)*i+rnd(0.2)-rnd(0.2))
+			
+			idx += 1
+			max_idx=max(idx,max_idx)
+			idx %= max_pixels
+		end
+	end
+	
+	-- add dx,dy to x,y for each pixel
+	p:add(
+		p, p, -- reading and writing to same userdata
+		3,    -- offset to read from: dx,dy start at 3
+		0,    -- offset to write to:  x,y starts at 0
+		2,    -- number of elements
+		5,    -- input stride between spans: same as p:width()
+		5,    -- output stride between spans: same as p:width()
+		max_pixels -- number of spans to add (one span for each pixel)
+	)
+	
+	-- rise up a little (smokey)
+	--p:add(-0.01,    p, 4,4,1, 5,5,max_pixels)
+	
+	last_mx=mx 
+	last_my=my
+	laa=aa
+end
+
+function _init()
+	-- looping 32 colour palette (using PICO-8 rainbow colours 8..15)
+	for i=0,31 do
+		local b0,g0,r0 = peek(0x5000+(8+(i\4))*4,3)
+		local b1,g1,r1 = peek(0x5000+(8+(((i\4)+1)%8))*4,3)
+		
+		local tt1 = (i%4)/4
+		local tt0 = 1-tt1
+		poke(0x5000+16*4+i*4,
+			b0*tt0 + b1*tt1,
+			g0*tt0 + g1*tt1,
+			r0*tt0 + r1*tt1)
+	end
+	
+end
+
+:: .info.pod
+--[[pod,created="2024-04-10 22:46:05",modified="2025-12-14 16:51:31",runtime=11,workspaces={{location="main.lua#87",workspace_index=1}}]]
+:: gfx/.info.pod
+--[[pod,created="2023-10-28 00:24:35",modified="2025-12-14 16:51:31"]]
+:: [eoc]

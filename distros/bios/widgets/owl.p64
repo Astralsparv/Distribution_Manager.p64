@@ -1,0 +1,110 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: sfx/
+:: main.lua
+--[[pod_format="raw",created="2025-01-04 02:20:50",modified="2025-01-07 22:34:59",revision=520]]
+blink_t = 0
+
+function _init()
+	
+	window{
+		width=22,
+		height=20,
+		has_frame=false,
+		resizeable=false,
+		z = 10 -- stay on top; can drag into tool windows
+	}
+	
+	-- when click anywhere in window, tell wm can grab it and move around
+	-- also: set cursor to grab when hovering over window
+	gui = create_gui{
+		click = function() send_message(3, {event="grab"}) end,
+		cursor="grab"
+	}
+end
+
+
+-- vector owl
+function draw_owl()
+
+	local b = 1
+	mx,my,mb = mouse()
+	if (mx<=0) b = 0
+	if (mx>=23) b = 2
+	
+	if (blink_t > 10 or mb > 0) b += 8
+	spr(b,0,0)
+end
+
+function _draw()
+
+	w, h = get_display():attribs()
+	r = min(w/2,h)
+
+	cls(0)
+	draw_owl()
+	poke(0x547d,0xff) -- wm draw mask; colour 0 is transparent
+
+end
+
+function _update()
+	blink_t = max(0, blink_t-1)
+	freq = 120
+	
+	mx,my=mouse()
+	if(mx>0 and mx<24 and my>0 and my<20) freq = 40 -- blink more when hover
+	if (blink_t == 0 and rnd(freq)<1) blink_t = 20
+	
+	gui:update_all()
+	
+end
+
+:: .info.pod
+--[[pod,author="zep",created="2025-01-04 02:21:48",icon=userdata("u8",16,16,"00000000000000000000000000000000010101010101010101010101010101010107070707070707070707070707070101070d0d0d0d0d07070d0d0d0d0d070101070d0d07070d0d0d0d07070d0d070101070d070707070d0d070707070d070101070d070107070d0d070107070d070101070d0d07070d0d0d0d07070d0d070101070d0d0d0d060606060d0d0d0d070101070707070707060607070707070701010707070707070707070707070707010107070707070707070707070707060101070707070707070707070707060100010606060606060606060606060100000101010101010101010101010100000000000000000000000000000000000000"),lowcol_icon=true,modified="2025-12-14 16:51:33",notes="",runtime=13,title="Owl Widget",version="",workspaces={{location="main.lua#10",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
+:: gfx/.info.pod
+--[[pod,created="2025-01-04 02:47:05",modified="2025-12-14 16:51:33"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTA0IDAyOjIwOjUwIixtb2RpZmllZD0iMjAyNS0w
+MS0wNyAyMjozNDo1OSIscmV2aXNpb249NDU3XV1sejQABAUAAMU7AADwL3tbMF09e2JtcD1weHUA
+QyAWFARABHAEoLSA1GAUHw8kTjRQBBceBB4nHiRQBx8VBy4HLQceFFAdBg0HDgctBgB0FFA9Bw4H
+TQkAMA0DLQsAJAcdKwBABBdPHz4A8y4UHixOFC8UMAtEDHQ7IAsJhCkEOyALFCkEKRQJFDsgCyQJ
+JAlUOzDkG1DUgLTwDCxmbGFncz0wLHBhbl94CADKeT0wLHpvb209NH0stQDwBDAEoASQpJDEcBQ-
+DyQ_FFAUDie2AHIOFEAEDgcvuABlDgRABActugAADgARTbsAAAoAAbgAAb4AEAQzABQtMgDyFRQO
+J08fJw4UMA8UJD4vHz4kDxQgDHQPH3QMIBwphCkcIBwECcUA-wUEHCAcRAkkCUQcMAzkDFDkcMTw
+C8YAHBRQewGQNE8PJB4UUCQexgBSFwRQFB7FAEMdB1AUeAEgBz0LABRNCQAEwAAQHSwAEi0rAPIU
+JB4nTx8XBEAvFBROLx8eFDA-FHQPH0QPFCA8BCmECQwgPBS8ANAMIDxUCSQJJAwwHORgfwEPuQAa
+XxAQBPDwMQDdDykDAfEMPgRuJFDeFFAOHxROLS4UUA0eDS4NLg0eFFDeAwBTBB5PH04KA5AtMA1E
+DHQ9IA0JAzI9IA1EAkEUPSANCQNPPTDkHQkDM-ABXgReFEAE7gRABB4vFE4tHt8CAZcAQi4NDgQZ
+APUQ7gRAFD5PHz4UMA0kPiw_JA0gDXQMdA0gHSmEKR0gHeECMR0gHeECXx0wDeQN4QIz8wJuBD4E
+UBTeUBQuLxROHQ5QFDMBEQ0VAPAI3lAkTk8fHgRALRROLB4UMD10DEQNID29AjMNID29AjENID29
+Aj8NMB29Av8v8AsOJy5HHhRQBxYXDhcmFw4UUAYXBgcOBwYnBtUFVEcOZw4UJAAFzQIRLdcFcAxE
+DXQ8IAzOAjI8IAwxAkEUPCAMzgJPPDDkHM4COUAORy5HvQIhFyaoAADABSQGJ6kAdQRABGcOZwQm
+AAPbAgfABRANwAUP3wJYcR5HLicOUBRTASEXFsMFA68AhBcGUBQOZw5HJAAD7wIOsQUP9AJdHzgx
+ACtpFhQE8AyUjwcfTo0HjA-BABVgLxUXLi0XvwBQLQYNFw4FAHAEQARNFw5NCABQDQMtFw4FAAC5
+ABMtKgAPtwBxAzIDiwcvFScOBy0nvwAItwBBTQceTW0Bby0HPx8tB7cARA6RAg8xAP----_EAE8F
+JwukJQlhviRQBB8V3QtgHQYNLi0G3QsxPS5NBgAwDQMtGAkRHR8AAB8JIF4U7AsvXgT2DjUP7AUF
+kC8PRC4UUBTOFOQLExXkCxItoAAA9QVBDk0uTQgAMA0DLaYAAAwAIR4tKAAOHQkPmQZHNgukkBoJ
+IL4E9AswFU4dIAkArABRPVAUHk0GAAKmAFEdUBQuLR8AE14UCS8EXsUOOg8cAgAPawc6AoUKCAYA
+AxoADg8ID5MKNw_HCcYP5AIrFBbkAhQWrQAQFq0AgOQcIBwUrx8UBwDeqxQcMAwUqxQMUCSLJKgA
+D4wDYvAHLAQPFj4PHz4PFgQsIDyrPCAcBAyrDFUBIRSurwAQrq8AHo6vAA-YBB0vF07hEywfLusE
+Hg-IAt4J-wQ-HidO1xMmJBQu1xMPEgVPDzEA----------------------------------------
+---------7JQbT04fX0=
+:: map/.info.pod
+--[[pod,created="2025-01-04 02:47:05",modified="2025-12-14 16:51:33"]]
+:: map/0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTA0IDAyOjIwOjUwIixtb2RpZmllZD0iMjAyNS0w
+MS0wNyAyMjozNDo1OSIscmV2aXNpb249NDIyXV1sejQAaAAAAFgQAADwCHt7Ym1wPXVzZXJkYXRh
+KCJpMTYiLDMyAwAvIjABAP--------------------vxCCIpLGhpZGRlbj1mYWxzZSxwYW5feD0w
+CADSeT0wLHRpbGVfaD0xNgoAEHcKAIB6b29tPTF9fQ==
+:: sfx/.info.pod
+--[[pod,created="2025-01-04 02:47:05",modified="2025-12-14 16:51:33"]]
+:: sfx/0.sfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTA0IDAyOjIwOjUwIixtb2RpZmllZD0iMjAyNS0w
+MS0wNyAyMjozNDo1OSIscmV2aXNpb249NDIyXV1sejQAoAAAAAsKAAD-MHB4dQADKAAABAAED0AQ
+Ag4AAaABIAKgDgAPEAAN8MoBAgNADw_QBAUGB0AMkAgJCgtADJAPDA8NDw4MQAzw-wEA6-8nqgEQ
+Bg8gEAEgASAB8AACEAIOEAEgDyEgATAPQPDDDygP--DGD-gKD-8PgA-3Dw0B8AkBEAYOMAD-----
+-70f-wEArM-ID0AADxBA--_w8P8BAP-qUP----8p
+:: [eoc]

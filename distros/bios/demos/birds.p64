@@ -1,0 +1,250 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: bird.lua
+--[[pod_format="raw",created="2024-09-07 19:08:02",modified="2024-09-09 09:14:36",revision=995]]
+
+bird={}
+
+function make_bird(x,y)
+	local b = {
+		x = x, y = y, dx = 0, dy = 0, fr = 0, d = 1,
+		tx = rnd(0.8)+0.1, ty = rnd(1),
+		t = rnd(3000)\1, px = 0,
+		panic_t = 0
+	}
+	return add(bird, b)
+end
+
+
+function draw_bird(a)
+	local bindex = 8
+	if (not a.proc_id) bindex = 9 + a.fr
+	spr(bindex, a.x-8, a.y-12, a.d < 0)
+	
+end
+
+
+function move_bird(a)
+
+	local mx,my = mouse()
+	prodded = ((a.x - mx)^2 + ((a.y-3)-my)^2 < 49)
+	
+	if (prodded and not a.last_prodded) then
+		local q = atan2(a.x-mx,a.y-my)
+		a.dx = cos(q)*2
+		a.dy = sin(q) - 2
+		a.ty = rnd()
+		a.proc_id = nil
+		a.panic_t = 90 + rnd(90)
+	end
+	a.last_prodded = prodded
+	
+	-- flying bird: fly to front window (if there is one)
+	if (not a.proc_id) then	
+
+		-- target position
+		local tx = a.tx*480
+		local ty = 100+a.ty*100 -- use randomly assigned vertical position
+
+		local w = windat[#windat]
+		if (w) then
+			tx = w.x+a.tx*w.width
+			ty = w.y
+		end
+		
+		tx +=  cos(a.t / 500)*20 + cos(a.t/800)*50
+		if (w) then
+			tx = mid(w.x+10, tx, w.x+w.width-20)
+		end
+		
+		local mag = w and 1 or 4 -- vary more when no window target
+		local ty1 = ty + cos(a.t / 200)*4*mag + cos(a.t/500)*10*mag
+		
+		local flapped = false
+		if (a.y > ty1-5) a.fr += 0.1
+		if (a.y < ty1-5) a.fr += 0.02
+		
+		if (a.panic_t > 0) then
+			a.panic_t -= 1
+			a.fr += 0.2
+		end
+		
+		-- flap
+		if (a.fr>2) then
+			-- meany weak flaps while freaked out
+			local mag = a.panic_t > 0 and 0.4 or 1
+			a.dy -= 1.2 * mag
+			if (a.x < tx-5) a.dx += .5 * mag
+			if (a.x > tx+5) a.dx -= .5 * mag
+			a.fr = 0
+		end
+		
+		if (a.fr < 1) a.fr += 0.02 -- get read to flap again
+		a.fr %= 2
+		
+		-- constant fine adjustment
+		if (a.x < tx + 1) a.dx += .02
+		if (a.x > tx - 1) a.dx -= .02
+		
+		
+		a.x += a.dx
+		a.y += a.dy
+		a.dx *= 0.95
+		a.dy *= 0.95
+		a.dy += .04 -- gravity
+		
+		a.d = sgn(a.dx)
+		
+		local dx = (a.x - tx)/4 -- don't need to be precise with x target
+		local dy = a.y - ty
+		
+		
+
+		-- land on window
+		
+		if (dx*dx + dy*dy) < 9 and a.dy > 0 and w then
+			a.proc_id = w.proc_id
+			a.px = (a.x - w.x) / w.width
+			a.dx,a.dy = 0,0
+		end
+		
+	end
+	
+	if a.proc_id then
+	
+		a.fr = 8
+		-- find that window
+		local found = false
+		local kicked_off = false
+		for w in all(windat) do
+			if (w.proc_id == a.proc_id) then
+				a.x = w.x+a.px*w.width
+				a.y = w.y
+				found = true
+			elseif found then
+				-- window in front of roosting window
+				if (a.x >= w.x-4 and a.x <= w.x+w.width+4 and
+					a.y >= w.y and a.y <= w.y+w.height+7) then
+					kicked_off = true
+				end
+			end
+		end
+		
+		if (not found or kicked_off) then
+			a.proc_id = nil
+			a.dx = rnd(4)-2
+			a.dy = rnd(4)-4
+			a.tx = rnd(0.8)+0.1 -- choose a new target
+			a.panic_t = 60+rnd(40)
+		end
+	end
+	
+	a.t += 1
+	
+end
+
+:: main.lua
+--[[pod_format="raw",created="2023-10-23 09:30:36",modified="2024-09-09 09:14:36",revision=979,stored="2023-12-04 16:12:51"]]
+--[[
+	birds.p64 by zep
+
+	** there is no way to close this app! **
+	
+	from terminal, use the ps command
+	> ps
+	look for "birds" and note the process number (say, 15)
+	> kill 15
+	
+	this app creates a fullscreen transparent layer, which uses a lot of
+	cpu and will cause frame skipping when more than a few windows are
+	open. // maybe in future: wm can observe dirty rectangles?
+]]
+
+windat = {}
+
+include "bird.lua"
+
+
+function _init()
+	
+	-- draw mask -- display pixels that have one of these bits set are drawn
+	-- 0 means draw all pixels
+	poke(0x547d, 0x3f)
+	
+	-- interaction mask --  pixels that have one of these bits set can be clicked on
+	-- 0 means interact with all pixels
+	-- note: not actually used because of window attribute: interactive == false
+	-- but otherwise can focus the app by clicking on one of the birds
+	-- (if that were possible)
+	poke(0x547e, 0xff)
+	
+	window{
+		z = 10, -- always on top. if bird gets covered, start flying.
+		        -- (or use windat to obscure?)
+		        -- could roost on active window
+		
+		-- cover, but not .fullscreen (open in a desktop workspace)
+		width = 480,
+		height = 270,
+		x = 0, y = 0,
+		moveable = false,
+		has_frame = false,
+		subscribe_to_windat = true,
+		interactive = false -- don't block clicks
+	}
+	
+end
+
+function _update()
+	foreach(bird, move_bird)
+	
+	-- add a few more birds each time a window is opened
+	-- (but never decrease!)
+	while #bird < #windat*3+6 do
+		make_bird(-10-rnd(200),rnd(240)+20)
+	end
+end
+
+
+function _draw()
+	
+	cls()
+
+	-- test: shouldn't block interaction because window{interactive = false}
+	--	circfill(240,135,20,12)
+	
+	foreach(bird, draw_bird)
+	
+end
+
+-- window positions are published every frame by wm
+-- (but unfortunately that frame already drawn by wm by the the time we get this)
+on_event("modified:/ram/shared/windows.pod", function()
+	windat = fetch"/ram/shared/windows.pod"
+end)
+
+:: .info.pod
+--[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 16:51:31",runtime=10,stored="2023-17-21 16:17:13",workspaces={{location="main.lua#13",workspace_index=1},{location="bird.lua#122",workspace_index=1},{location="gfx/0.gfx",workspace_index=2}}]]
+:: gfx/.info.pod
+--[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 16:51:31",stored="2023-16-21 16:16:54"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTEwLTIzIDA5OjMwOjM2Iixtb2RpZmllZD0iMjAyNC0w
+OS0wOSAwOToxNDozNiIscmV2aXNpb249OTE1LHN0b3JlZD0iMjAyMy0xMi0wNCAxNjoxMjo1MSJd
+XWx6NABtAQAA5DEAAPMie1swXT17Ym1wPXB4dQBDIBAQBPBjFwAfGAAXcBcAHgAX8GUsZmxhZ3M9
+MCxwYW5feAgAx3k9MCx6b29tPTh9LD8A-w0ICAQQCHAvD0AOAQ5ALgoQCQAZQAopIBopQAIwSAAc
+-wqgCC8PEAkQDgEOEAQJAC4KABQpMAQpQBlQSgAeJRAIkQD-ASAZAjA5BDAaCRQgAgoQBIBKABkA
+GwEf8DEAsP8eJg8V0A4ILrAOLw8OoA4NAQ0OkB4tCg5wDgkOGR6QDgopDoAOGikOkB4CHvA2XQAe
+VT8VoA4IWgD-E6AOLQoOgA4ZAh6ADjkEDpAOGgkUDoAOAgoeBA6QHhAO8DVhAB1QNz8VkB5hAEBw
+DgkeYwBAcA4ECWYA-wVgDhQpHoAOBCkOoA4ZDrAOAg7wN30BHg8xAP----------------------
+---------------------------------------rUG09OH19
+:: map/.info.pod
+--[[pod,created="2023-10-21 16:16:54",modified="2025-12-14 16:51:31",stored="2023-16-21 16:16:54"]]
+:: map/0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTMwLTIzIDA5OjMwOjM2Iixtb2RpZmllZD0iMjAyMy0x
+NC0zMCAxMDoxNDowNCIscmV2aXNpb249OTQsc3RvcmVkPSIyMDIzLTEyLTA0IDE2OjEyOjUxIl1d
+bHo0AF0AAABYBAAA8BN7bGF5ZXI9e1swXT17Ym1wPXVzZXJkYXRhKCJpMTYiLDE2AwAvIjABAP--
+-__hIikscGFuX3g9MAgA8gZ5PTAsc2NhbGU9MSx0aWxlX2g9MTYKAHB3PTE2fX19
+:: [eoc]

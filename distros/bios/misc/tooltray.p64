@@ -1,0 +1,41 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: sfx/
+:: main.lua
+--[[pod_format="raw",created="2024-03-10 03:54:08",modified="2024-03-10 03:59:32",revision=14]]
+-- placeholder background for tooltray
+-- to do: tooltray theme is used for "desktop*" in that context?
+function _draw()
+	cls(1)
+end
+
+:: .info.pod
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 16:51:32",stored="2024-03-10 03:59:32",workspaces={{location="main.lua",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/map0.map",workspace_index=3},{location="sfx/sfx0.sfx",workspace_index=4}}]]
+:: gfx/.info.pod
+--[[pod,created="2024-03-10 03:54:08",modified="2025-12-14 16:51:32",stored="2024-03-10 03:54:08"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI0LTAzLTEwIDAzOjU0OjA4Iixtb2RpZmllZD0iMjAyNC0w
+My0xMCAwMzo1OTozMiIscmV2aXNpb249MTBdXWx6NABtAAAABTEAAPMUe1swXT17Ym1wPXB4dQBD
+IBAQBPDwLGZsYWdzPTAscGFuX3gIAM95PTAsem9vbT04fSwxAP--------------------------
+-------------------------------------_dQbT04fX0=
+:: map/.info.pod
+--[[pod,created="2024-03-10 03:54:08",modified="2025-12-14 16:51:32",stored="2024-03-10 03:54:08"]]
+:: map/map0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI0LTAzLTEwIDAzOjU0OjA4Iixtb2RpZmllZD0iMjAyNC0w
+My0xMCAwMzo1OTozMiIscmV2aXNpb249MTBdXWx6NABSAAAATwQAAPAMe1swXT17Ym1wPXVzZXJk
+YXRhKCJpMTYiLDE2AwAvIjABAP---__hIikscGFuX3g9MAgA0nk9MCx0aWxlX2g9MTYKABB3CgCA
+em9vbT0xfX0=
+:: sfx/.info.pod
+--[[pod,created="2024-03-10 03:54:08",modified="2025-12-14 16:51:32",stored="2024-03-10 03:54:08"]]
+:: sfx/sfx0.sfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI0LTAzLTEwIDAzOjU0OjA4Iixtb2RpZmllZD0iMjAyNC0w
+My0xMCAwMzo1OTozMiIscmV2aXNpb249N11dbHo0ABABAABRBwAA8CdweHUAAygAAAMABA9AEAIO
+AAGgASACoA4ADxAADfDKAQIDBAUGBwEP-5AICQoLDwwPDQ8ODw8QAPAADQ8RDxIPEw8UDxUPFg8X
+EwDxAQ8YDxkPGg8bDxwPHQ8eDx8UAPEAIA8hDyIPIw8kDyUPJg8nFADxACgPKQ8qDysPLA8tDy4P
+LxQA8QAwDzEPMg8zDzQPNQ82DzcUAP8FOA85DzoPOw88Dz0PPg8-AQ--8P8BAOv-J1oBEAYPIBAB
+IAEgAfAAAhACDBABIA8hIAEwD0Dwww8oD--wxg-4Cg--D4AP9w8NAfAJARAGDDAA-zkf-wEA3L-4
+D0AADUD--7DwcAoA--9kH-8BAJdQ-----x8=
+:: [eoc]
