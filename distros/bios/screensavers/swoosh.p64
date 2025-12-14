@@ -47,5 +47,5 @@ function _draw()
 	print(string.format("cpu:%.3f",stat(1)),2,2)
 end
 :: .info.pod
---[[pod,created="2024-10-02 21:39:52",modified="2025-12-14 17:16:03",stored="2024-39-02 21:39:52"]]
+--[[pod,created="2024-10-02 21:39:52",modified="2025-12-14 17:21:54",stored="2024-39-02 21:39:52"]]
 :: [eoc]

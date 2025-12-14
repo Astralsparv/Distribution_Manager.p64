@@ -1,5 +1,4 @@
---[[pod_format="raw",created="2025-12-14 17:06:58",modified="2025-12-14 17:14:07",revision=8]]
---[[
+--[[pod_format="raw",author="Astralsparv",created="2025-12-14 17:06:58",modified="2025-12-14 17:21:50",notes="",revision=8,title="Bootloader",version="1.1"]]--[[
 	Bootloader
 	v1.1
 	@astralsparv

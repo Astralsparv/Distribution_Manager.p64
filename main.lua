@@ -1,12 +1,10 @@
---[[pod_format="raw",created="2025-12-14 14:52:01",modified="2025-12-14 17:16:51",revision=52]]
+--[[pod_format="raw",created="2025-12-14 14:52:01",modified="2025-12-14 17:21:27",revision=56]]
 --load fonts
 
 include "util.lua"
 
-if (fstat("/distributions/bootloader.lua")) then
-	bootloader_version=fetch_metadata("/distributions/bootloader.lua").version
-end
-
+local meta=fetch_metadata("/distributions/bootloader.lua")
+if (meta) bootloader_version=meta.version
 _,system_version=stat(5)
 
 system_version=string.gsub(system_version,"%.","_")
