@@ -132,16 +132,16 @@ fixme: default location shouldn't be /inside/ the app!
 
 
 :: .info.pod
---[[pod,author="zep",created="2025-01-07 00:16:27",icon=userdata("u8",16,16,"0000010101010101010101010100000000010e0e0e0e0e0e0e0e0e0e0e0100000107010e0e0e0e0e0e0e0e0e0e0e01000001010e0e0e0e0e0e0e0e0e0e0e010000010e0e0e0e0e0e0e0e0e0e0e0e01000107010e0e0e0e0e0e0e0e0e0e0e01000001010e0e0e0e0e0e0e0e0e0e0e010000010e0e0e0e0e0e0e0e0e0e0e0e01000107010e0e0e0e0e0e0e0e0e0e0e01000001010e0e0e0e0e0e0e0e0e0e0e010000010e0e0e0e0e0e0e0e0e0e0e0e01000107010e0e0e0e0e0e0e0e0e0e01010000010101010101010101010101070100000101070707070707070707070e01000000010e0e0e0e0e0e0e0e0e0e01000000000001010101010101010101000000"),modified="2025-12-14 17:48:12",notes="write stuff",runtime=21,stored="2024-03-10 01:40:52",title="Notebook",version="",workspaces={{location="main.lua#103",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
+--[[pod,author="zep",created="2025-01-07 00:16:27",icon=userdata("u8",16,16,"0000010101010101010101010100000000010e0e0e0e0e0e0e0e0e0e0e0100000107010e0e0e0e0e0e0e0e0e0e0e01000001010e0e0e0e0e0e0e0e0e0e0e010000010e0e0e0e0e0e0e0e0e0e0e0e01000107010e0e0e0e0e0e0e0e0e0e0e01000001010e0e0e0e0e0e0e0e0e0e0e010000010e0e0e0e0e0e0e0e0e0e0e0e01000107010e0e0e0e0e0e0e0e0e0e0e01000001010e0e0e0e0e0e0e0e0e0e0e010000010e0e0e0e0e0e0e0e0e0e0e0e01000107010e0e0e0e0e0e0e0e0e0e01010000010101010101010101010101070100000101070707070707070707070e01000000010e0e0e0e0e0e0e0e0e0e01000000000001010101010101010101000000"),modified="2025-12-14 18:03:47",notes="write stuff",runtime=21,stored="2024-03-10 01:40:52",title="Notebook",version="",workspaces={{location="main.lua#103",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
 :: gfx/.info.pod
---[[pod,created="2023-10-05 08:48:44",modified="2025-12-14 17:48:12",stored="2023-48-05 08:48:44"]]
+--[[pod,created="2023-10-05 08:48:44",modified="2025-12-14 18:03:47",stored="2023-48-05 08:48:44"]]
 :: gfx/0.gfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTEwLTA1IDA4OjUwOjA4Iixtb2RpZmllZD0iMjAyNS0w
 MS0wNyAwMDoxNjo1MiIscmV2aXNpb249MjBdXWx6NABtAAAABTEAAPMUe1swXT17Ym1wPXB4dQBD
 IBAQBPDwLGZsYWdzPTAscGFuX3gIAM95PTAsem9vbT04fSwxAP--------------------------
 -------------------------------------_dQbT04fX0=
 :: map/.info.pod
---[[pod,created="2023-10-05 08:48:44",modified="2025-12-14 17:48:12",stored="2023-48-05 08:48:44"]]
+--[[pod,created="2023-10-05 08:48:44",modified="2025-12-14 18:03:47",stored="2023-48-05 08:48:44"]]
 :: map/0.map
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTEwLTA1IDA4OjUwOjA4Iixtb2RpZmllZD0iMjAyNS0w
 MS0wNyAwMDoxNjo1MiIscmV2aXNpb249MjBdXWx6NABcAAAAWAQAAPAIe3tibXA9dXNlcmRhdGEo
@@ -153,7 +153,7 @@ My0wNiAwOToyNTo0NCIscmV2aXNpb249MF1dbHo0AGkAAACjCAAA8BN7bGF5ZXI9e1swXT17Ym1w
 PXVzZXJkYXRhKCJpMTYiLDE2AwAvIjABAP---__hIikscGFuX3g9MAgA8gZ5PTAsc2NhbGU9MSx0
 aWxlX2g9MTYKAG93PTE2fSxLBP----84UDE2fX19
 :: sfx/.info.pod
---[[pod,created="2023-10-05 08:48:44",modified="2025-12-14 17:48:12",stored="2023-48-05 08:48:44"]]
+--[[pod,created="2023-10-05 08:48:44",modified="2025-12-14 18:03:47",stored="2023-48-05 08:48:44"]]
 :: sfx/0.sfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTEwLTEyIDEwOjU1OjExIixtb2RpZmllZD0iMjAyNS0w
 MS0wNyAwMDoxNjo1MiIscmV2aXNpb249MTRdXWx6NABwAAAA7gcAAN9weHUAAygAAAQABPD-AQDs

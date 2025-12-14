@@ -5,7 +5,7 @@ version 2
 :: map/
 :: sfx/
 :: main.lua
---[[pod_format="raw",created="2025-12-13 22:05:12",modified="2025-12-13 23:13:21",revision=96]]
+--[[pod_format="raw",created="2025-12-13 22:05:12",modified="2025-12-14 17:57:00",revision=116]]
 local distro=fetch("/distributions/active.txt")
 window{cursor=0,pauseable=false}
 
@@ -13,21 +13,33 @@ local pointer=1
 
 --reload pages
 
+local run,sys=stat(5)
 function reloadPages()
 	pages={
 		main={
-			{text="Go to exit menu",select=function() loadPage("exit") end},
+			{text="<main> [system information] [exit]",select=function() loadPage("systemInformation") end},
 			{text="Active Distribution: "..distro,select=function() loadPage("changeDistro") end}
 		},
 		changeDistro={
+			{text="<main> [system information] [exit]",select=function() reloadPages() loadPage("systemInformation") end},
 			{text="Return",select=function() reloadPages() loadPage("main") end},
 			{text="Active Distribution: "..distro}
 		},
+		systemInformation={
+			{text="[main] <system information> [exit]",select=function() reloadPages() loadPage("exit") end},
+			{text="Picotron Runtime Version: "..run},
+			{text="Picotron System Version: "..sys},
+			--static stuff, just for looks
+			{text="Per-process RAM: 33554432 bytes (32MB)"},
+			{text="Picotron CPU @ 8MHz"},
+		},
 		
 		exit={
-			{text="Go to main menu",select=function() loadPage("main") end},
-			{text="Save changes and exit",select=function() saveChanges() send_message(2,{event="reboot"}) end},
-			{text="Discard changes and exit",select=function() send_message(2,{event="reboot"}) end}
+			{text="[main] [system information] <exit>",select=function() loadPage("main") end},
+			{text="Save changes and reboot",select=function() saveChanges() send_message(2,{event="reboot"}) end},
+			{text="Discard changes and reboot",select=function() send_message(2,{event="reboot"}) end},
+			{text="Save changes and shutdown",select=function() saveChanges() send_message(2,{event="shutdown"}) end},
+			{text="Discard changes and shutdown",select=function() send_message(2,{event="shutdown"}) end},
 		}
 	}
 	--load distros
@@ -68,7 +80,7 @@ end
 function _draw()
 	cls()
 	print("\^w\^tPicotron BIOS",2,2,7)
-	print("\014v0.1\n",2,18,7)
+	print("\014v1.0\n",2,18,7)
 	for i=1, #entries do
 		local t=entries[i].text
 		if (pointer==i) t="> "..t
@@ -76,9 +88,9 @@ function _draw()
 	end
 end
 :: .info.pod
---[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 17:48:14",runtime=24,workspaces={{location="main.lua#29",workspace_index=1},{location="gfx/0.gfx",workspace_index=2}}]]
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 18:03:49",runtime=24,workspaces={{location="main.lua#26",workspace_index=1},{location="gfx/0.gfx",workspace_index=2}}]]
 :: gfx/.info.pod
---[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 17:48:14"]]
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 18:03:49"]]
 :: gfx/0.gfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTE3IDEwOjM1OjQ4Iixtb2RpZmllZD0iMjAyNS0x
 Mi0xMyAyMzowNjoyMSIscmV2aXNpb249N11dbHo0AMAAAAB0MgAA8Rt7WzBdPXtibXA9cHh1AEMg
@@ -87,14 +99,14 @@ AVAnAU0BJ1ABTQoAO2EnUDEABAgA8wAgLGZsYWdzPTAscGFuX3gIANp5PTAsem9vbT0xNH0soQAv
 8PAyAP-----------------------------------------------------------------XUD0x
 NH19
 :: map/.info.pod
---[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 17:48:14"]]
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 18:03:49"]]
 :: map/0.map
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTE3IDEwOjM1OjQ4Iixtb2RpZmllZD0iMjAyNS0w
 MS0xNyAxMDozNzo0NCIscmV2aXNpb249MV1dbHo0AFQAAABEEAAA8Ah7e2JtcD11c2VyZGF0YSgi
 aTE2IiwzMgMALyIwAQD--------------------7oSIpLHBhbl94PTAIANJ5PTAsdGlsZV9oPTE2
 CgBgdz0xNn19
 :: sfx/.info.pod
---[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 17:48:14"]]
+--[[pod,created="2025-11-13 21:07:43",modified="2025-12-14 18:03:49"]]
 :: sfx/0.sfx
 b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTA3LTMxIDA4OjMwOjI4Iixtb2RpZmllZD0iMjAyNS0w
 Ny0zMSAwODozMDoyOCIscmV2aXNpb249MF1dbHo0AKAAAAALCgAA-zBweHUAAygAAAQABA9AEAIO
