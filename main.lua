@@ -1,10 +1,12 @@
---[[pod_format="raw",created="2025-12-14 14:52:01",modified="2025-12-14 17:21:27",revision=56]]
---load fonts
+--[[pod_format="raw",created="2025-12-14 14:52:01",modified="2025-12-14 17:47:45",revision=67]]
+window{pauseable=false}
 
 include "util.lua"
 
-local meta=fetch_metadata("/distributions/bootloader.lua")
-if (meta) bootloader_version=meta.version
+if (fstat("/distributions/bootloader.lua")) then
+	bootloader_version=fetch_metadata("/distributions/bootloader.lua").version
+end
+
 _,system_version=stat(5)
 
 system_version=string.gsub(system_version,"%.","_")
@@ -33,5 +35,6 @@ end
 function _draw()
 	cls(3)
 	print("\^w\^tDistribution Manager",2,2,7)
+	print("minie font by @thelxinoe5",358,262,7)
 	gui:draw_all()
 end

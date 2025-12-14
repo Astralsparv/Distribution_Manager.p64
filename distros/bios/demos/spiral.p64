@@ -17,5 +17,5 @@ function _draw()
 	print(string.format("%.5f",stat(1)),2,2,7)
 end
 :: .info.pod
---[[pod,created="2025-10-29 08:41:51",modified="2025-12-14 17:21:54",runtime=21,workspaces={{location="main.lua#13",workspace_index=1}}]]
+--[[pod,created="2025-10-29 08:41:51",modified="2025-12-14 17:48:12",runtime=21,workspaces={{location="main.lua#13",workspace_index=1}}]]
 :: [eoc]

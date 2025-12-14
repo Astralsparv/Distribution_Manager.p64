@@ -1,4 +1,4 @@
---[[pod_format="raw",created="2025-12-14 15:05:33",modified="2025-12-14 17:09:29",revision=133]]
+--[[pod_format="raw",created="2025-12-14 15:05:33",modified="2025-12-14 17:49:01",revision=141]]
 gui=create_gui{}
 
 local x,y=2,20
@@ -7,6 +7,22 @@ local w,h=text(gui,{
 	x=x,
 	y=y,
 	label="\^w\^t\014Install the distribution system",
+})
+y+=h+5
+
+local w,h=text(gui,{
+	x=x,
+	y=y,
+	label="\^w\^t\014THIS IS NOT UPDATE-PROOF.",
+	fg=8
+})
+y+=h+5
+
+local w,h=text(gui,{
+	x=x,
+	y=y,
+	label="You will need to re-do this each update :C",
+	fg=2
 })
 y+=h+5
 
@@ -66,6 +82,7 @@ local w,h=button(gui,{
 		flip()
 		
 		notify("Downloading BIOS distribution")
+		flip()
 --		need online downloads for distributions!
 --		downloadDistribution("https://github.com/Astralsparv/bios-picotron-distribution","bios")
 		downloadDistribution("distros/bios","bios")
