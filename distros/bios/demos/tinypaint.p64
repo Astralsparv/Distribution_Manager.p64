@@ -1,0 +1,93 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: sfx/
+:: main.lua
+--[[pod_format="raw",created="2025-04-08 04:48:36",modified="2025-04-08 05:44:32",revision=259]]
+-- tiny painting program to demo create_undo_stack()
+
+col = 8 + rnd(11) -- random brush colour
+
+page = userdata("u8",160,120)
+--page:copy(6,true) -- start solid gray
+
+function _init()
+	window{
+		width = 160, height = 120,
+		resizeable = false,
+		title = "Tiny Paint",
+		cursor = 0 -- hide window manager cursor
+	}
+	stack = create_undo_stack(
+		function() return page end, -- return the undoable data
+		function(dat) blit(dat,page) end, -- restore undoable data from dat
+		0x11, -- optional; efficient pod format for generating image deltas (raw binary)
+		nil -- only one undo stack in this cart so don't need an "item" parameter
+	)
+end
+
+function _draw()
+	cls(7)
+	spr(page) -- draw with transparency
+	mx,my,mb = mouse()
+	circ(mx,my,3, col)
+	print("\014ctrl-z/y to undo/redo",2,2,18)
+end
+
+function _update()
+	mx,my,mb = mouse()
+	if mb > 0 then
+		if (last_mb == 0) stack:checkpoint()
+		set_draw_target(page)
+		-- draw a thick line
+		local dx,dy = (mx-last_mx)/10, (my-last_my)/10
+		for i=1,10 do
+			circfill(last_mx, last_my, 2, col)
+			last_mx += dx
+			last_my += dy
+		end
+		set_draw_target()
+	end
+	if (mb==0 and last_mb == 1) col = 8 + rnd(11) -- change colour on release
+	last_mx,last_my,last_mb = mx,my,mb
+
+	if key"ctrl" then
+		if (keyp"z") stack:undo()
+		if (keyp"y") stack:redo()
+		-- copy to clipboard in a format that can be embedded in code / text
+		-- see below
+		if (keyp"c") set_clipboard(pod(page,0x7,{pod_type="gfx"}))
+	end
+end
+
+-- 8< -- pasted from tinypaint: -- --
+--[[pod_type="gfx"]]unpod("b64:bHo0AEMDAABpAwAAsXB4dQBDIKB4BPD-AQDxLQZM8Ips8IiM8IeM8Ias8ITM8IPM8ILs8IHs8IB8AHzwNyzwNIwQbPA2XPAyfCBs8DV88DB8QGzwNIzwLwgA8auc8C18UGzwM7zwLGxgfPAyzPAqfHBs8DH8APAobIB88DD8AvAd-ACQfPAvbACs8Az8EJB88AE-D-AabBCs8AMsAPwUoGzgbvAZbCCskFwA-BjAbMCO8BhsMKwQ-CbAbLCe8BhsUPww0GygrvAYbGD8LuBsgL7wGWxw-CHwC3xgvvAZfID8BgAsACzwHmxQrvAbbKD8BPAnbECu8BxssMzwLWwgvvAdbMBc8DN8zvAdfPBGbL7wHnzwSEwHADBJTK4HAPARSkyO8CB88DwtoExu8CJs8DxNkFxO8CNs8DttgGwu8CQJAEKQbPAmCABSsE8O8BULAEKga-AUCgBCcKvwEwoAIVDLCgDxIX2AbDDr8BNssD3wLG2AbBD7APAUbKBd8CttgGz7AfAVbJB98CptgFz7APAIPaB8gA4Ac0zr8AltkGwNAFG78AvtICgA8R1NkEyb8A39A1yQffArLaBce-AO-QRMoH3wOGw78BL9BDywbfA4bPAX-QNMoAoAMBn9AR8A0Ao_8Bls8BzNXKB98AVMAfIb8CJdbLBt8AS_8Bds8ChswE3wBM7wFnzwKGzQLfAE3vAWbPApbPAVzvAXCQDxr77wGExPEfAkK1zwFo7wGUzq8BhrTPAXLiA-C-AXPPoE8BC7TPAbefAUPPoF8A3bTPAaqfASPPoG8An7AUzwGfkB8Axc_gXwCPsBXPAY_QPwCnz6BPAH_wFs8Bf5BfAIjFDK8AjbIGzwFvkG8Ah80ErwCatQbPAWiQC58Ad88B17gGzwFYkwmfAGfPAfW5Bs8BSJUHnwBozwICuwfPATiZAp8AWc8DF88BJ58BGs8DEpbPARafAQvPAwWVzwEkkKAFF5XPASKQoAEYmpAvNGL6l88DC88DCpAJzwKtzwMakg7PAi7PAxqUD8APAY-AbwMZlw-AXwB-wP8DKZkPw58DKZsPw28DSJ4Pwy8DZ58AH8LfA7SfAK-CPwPynwDfwZ8G78B1ADkP----------Dg==")
+-- -- -- -- -- -- -- -- -- -- -- -- >8
+
+:: .info.pod
+--[[pod,created="2025-04-08 04:48:56",modified="2025-12-15 18:11:27",runtime=17,workspaces={{location="main.lua#34",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
+:: gfx/.info.pod
+--[[pod,created="2025-04-08 05:00:37",modified="2025-12-15 18:11:27"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTA0LTA4IDA0OjQ4OjM2Iixtb2RpZmllZD0iMjAyNS0w
+NC0wOCAwNTo0NDozMiIscmV2aXNpb249MjA0XV1sejQAfgAAABIxAADzIXtbMF09e2JtcD1weHUA
+QyAQEATwVgcQB8AX0BfABxAH8FYsZmxhZ3M9MCxwYW5feAgAy3k9MCx6b29tPTh9LD4AH-AxAP--
+-------------------------------------------------------------9dQbT04fX0=
+:: map/.info.pod
+--[[pod,created="2025-04-08 05:00:37",modified="2025-12-15 18:11:27"]]
+:: map/0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTA0LTA4IDA0OjQ4OjM2Iixtb2RpZmllZD0iMjAyNS0w
+NC0wOCAwNTo0NDozMiIscmV2aXNpb249MjAyXV1sejQAaAAAAFgQAADwCHt7Ym1wPXVzZXJkYXRh
+KCJpMTYiLDMyAwAvIjABAP--------------------vxCCIpLGhpZGRlbj1mYWxzZSxwYW5feD0w
+CADSeT0wLHRpbGVfaD0xNgoAEHcKAIB6b29tPTF9fQ==
+:: sfx/.info.pod
+--[[pod,created="2025-04-08 05:00:37",modified="2025-12-15 18:11:27"]]
+:: sfx/0.sfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTA0LTA4IDA0OjQ4OjM2Iixtb2RpZmllZD0iMjAyNS0w
+NC0wOCAwNTo0NDozMiIscmV2aXNpb249MjAyXV1sejQAoAAAAAsKAAD-MHB4dQADKAAABAAED0AQ
+Ag4AAaABIAKgDgAPEAAN8MoBAgNADw_QBAUGB0AMkAgJCgtADJAPDA8NDw4MQAzw-wEA6-8nqgEQ
+Bg8gEAEgASAB8AACEAIOEAEgDyEgATAPQPDDDygP--DGD-gKD-8PgA-3Dw0B8AkBEAYOMAD-----
+-70f-wEArM-ID0AADxBA--_w8P8BAP-qUP----8p
+:: [eoc]

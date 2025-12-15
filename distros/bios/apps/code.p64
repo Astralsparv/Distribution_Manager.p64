@@ -1,0 +1,266 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: sfx/
+:: main.lua
+--[[pod_format="raw",created="2023-02-24 19:02:00",modified="2025-07-10 03:25:41",revision=40]]
+local ce
+
+function _draw()
+
+	g:draw_all() -- covers whole screen; don't need to cls()
+
+end
+
+function _update()
+
+	-- code editor always has keyboard focus when search is not open
+	if (not ce:search_box_is_open()) ce:set_keyboard_focus(true)
+
+	g:update_all()
+
+end
+
+function apply_settings()
+	if (not sdat) return
+	
+	poke(0x4000, get(sdat.monospace and
+		fetch("/system/fonts/lil_mono.font") or		
+		fetch("/system/fonts/lil.font")
+	))
+
+	-- poke(0x4000,get(fetch"/system/fonts/pug3.font")) -- test  // result: so unreadable
+
+	
+
+	-- update menu items
+	menuitem{id="monospace", label = sdat.monospace and
+		"\^:007f4f4f4f7f0000 Monospace: On" or
+		"\^:007f7979797f0000 Monospace: Off"
+	}
+
+	menuitem{id="show_tabs", label = sdat.show_tabs and
+		"\^:007f4f4f4f7f0000 Show Tabs: On" or
+		"\^:007f7979797f0000 Show Tabs: Off"
+	}
+
+	menuitem{id="show_line_numbers", label = sdat.show_line_numbers and
+		"\^:007f4f4f4f7f0000 Line Numbers: On" or
+		"\^:007f7979797f0000 Line Numbers: Off"
+	}
+	
+	-- live editor update (just stuff everything in there)
+	if (ce) then
+		for k,v in pairs(sdat) do
+			ce[k] = v
+		end
+	end
+	
+end
+
+function store_settings()
+	store("/appdata/system/code.pod",sdat)
+end
+
+
+function _init()
+
+	sdat = fetch("/appdata/system/code.pod") 
+	
+	if not sdat then
+		sdat = {
+			monospace = false,
+			show_tabs = false,
+			bgcol = 1,
+			curcol = 14,
+			selcol = 10,
+			lncol = 16,
+			syntax_highlighting = true,
+			show_line_numbers = true
+		}
+		store("/appdata/system/code.pod", sdat)
+	end
+
+	window{
+		tabbed = true,
+		icon   = userdata("[gfx]08080770077077000077770000777700007777000077770000770770077000000000[/gfx]"),
+	}
+
+	g = create_gui()
+	
+	ce = g:attach_text_editor({
+		x=0,y=0,
+		width_rel=1.0,
+		height_rel=1.0,
+		syntax_highlighting=sdat.syntax_highlighting,
+		show_tabs=sdat.show_tabs,
+		show_line_numbers=sdat.show_line_numbers,
+		markup=false, -- to do: remove markup from editor widget
+		embed_pods=true,
+		has_search=true,
+		bgcol = sdat.bgcol,
+		curcol = sdat.curcol,
+		selcol = sdat.selcol,
+		lncol = sdat.lncol,
+		squash_to_clip = true
+	})
+
+	ce:attach_scrollbars()
+	
+	wrangle_working_file(
+
+		-- save to obj
+		function ()
+			ce:get_undo_stack():checkpoint() -- undo never jump over state of last save
+			return table.concat(ce:get_text(),"\n")
+		end,
+
+		-- load from obj (assumed to be a string)
+		function (str, meta)
+			local text = split(str, "\n", false)
+			--if (text) printh("code: loaded "..#text.." lines")
+			if (not text or #text == 0) then text = {""} end
+			ce:set_text(text)
+			ce.syntax_highlighting = pwf():ext() == "lua"
+		end,
+
+		-- default filename and extension
+		"untitled.lua", 
+
+		-- location string
+		function()
+			local x,y = ce:get_cursor()
+			return y
+		end,
+
+		-- process location string. if it is a number, jump to that number
+		-- to do: "hoge.lua#function:foo"? or just "hoge.lua#foo" to search for that string?
+
+		function(loc, highlight)
+			if tonum(loc) then
+				ce:jump_to_line(tonum(loc), highlight)
+				--ce:center_cursor(0.3) -- 0.3 put cursor nearer to top.  to do: why does this not work on first load via infobar?
+			end
+		end,
+
+		--[[
+			state_hint: return a value that can be used to detect possible changes in the document. It should be
+			very cheap; when the return value changes, a more expensive state comparison is performed by wranger
+			to look for changes (and cause the "*" to appear in front of the filename in the window title).
+
+			Text fields created with :attach_text_editor provide their own state hint function that can be used
+			here, which is a combination of undo stack position and current line length.
+		]]
+		function ()
+			return ce and ce:get_state_hint()
+		end
+
+	)
+	
+	-- to do: menu items
+	--[[
+	"\^:304884844c360300 Find Text     (CTRL-F)",
+	"\^:1f003f003e007c00 Jump to Line  (CTRL-L)",
+	]]
+	
+	--menuitem{divider=true} -- to do
+
+	menuitem{
+		stay_open = true,
+		id="monospace",
+		label="Monospace",
+		action=function()
+			sdat.monospace = not sdat.monospace
+			store_settings() -- triggers apply_settings() via file change
+		end
+	}
+	
+	menuitem{
+		stay_open = true,
+		id="show_tabs",
+		label="Show Tabs",
+		action=function()
+			sdat.show_tabs = not sdat.show_tabs
+			store_settings() -- triggers apply_settings() via file change
+		end
+	}
+
+	menuitem{
+		stay_open = true,
+		id="show_line_numbers",
+		label="Line Numbers",
+		action=function()
+			sdat.show_line_numbers = not sdat.show_line_numbers
+			store_settings() -- triggers apply_settings() via file change
+		end
+	}
+
+
+	apply_settings()
+
+	-- test
+	ce:center_cursor(0.5)
+
+end
+
+on_event("modified:/appdata/system/code.pod",
+	function(msg)
+		sdat = fetch(msg.filename)
+		apply_settings()
+	end
+)
+
+
+
+:: untitled.txt
+--[[pod_format="raw",created="2025-04-15 02:53:10",modified="2025-04-15 03:09:29",revision=20]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:: .info.pod
+--[[pod,author="lexaloffle",created="2025-04-15 02:52:35",icon=userdata("u8",16,16,"00000001010101010101010101000000000001070707070707070707070100000001070d0d0d0d0d0d0d0d0d0d07010001070d0d0d0d0d0d0d0d0d0d0d0d070101070d0d0d07070d0d07070d0d0d070101070d0d07070d0d0d0d07070d0d070101070d0d07070d0d0d0d07070d0d070101070d0d07070d0d0d0d07070d0d070101070d0d07070d0d0d0d07070d0d070101070d0d0d07070d0d07070d0d0d070101070d0d0d0d0d0d0d0d0d0d0d0d07010106070d0d0d0d0d0d0d0d0d0d07060101060607070707070707070707060601000106060606060606060606060601000000010606060606060606060601000000000001010101010101010101000000"),lowcol_icon=true,modified="2025-12-15 18:11:27",notes="",runtime=19,stored="2023-54-12 10:54:06",title="Picotron Code Editor",version="0.2",workspaces={{location="main.lua#10",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3}}]]
+:: gfx/.info.pod
+--[[pod,created="2023-01-24 19:01:56",modified="2025-12-15 18:11:27",stored="2023-01-24 19:01:56"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTEwLTI1IDA3OjQ3OjUwIixtb2RpZmllZD0iMjAyNS0w
+NC0xNSAwMzoxMDoxNiIscmV2aXNpb249MjNdXWx6NABtAAAABTEAAPMUe1swXT17Ym1wPXB4dQBD
+IBAQBPDwLGZsYWdzPTAscGFuX3gIAM95PTAsem9vbT04fSwxAP--------------------------
+-------------------------------------_dQbT04fX0=
+:: map/.info.pod
+--[[pod,created="2023-01-24 19:01:56",modified="2025-12-15 18:11:27",stored="2023-01-24 19:01:56"]]
+:: map/0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDIzLTEwLTI1IDA3OjQ3OjUwIixtb2RpZmllZD0iMjAyNS0w
+NC0xNSAwMzoxMDoxNiIscmV2aXNpb249MjJdXWx6NABoAAAAWBAAAPAIe3tibXA9dXNlcmRhdGEo
+ImkxNiIsMzIDAC8iMAEA--------------------_-EIIiksaGlkZGVuPWZhbHNlLHBhbl94PTAI
+ANJ5PTAsdGlsZV9oPTE2CgAQdwoAgHpvb209MX19
+:: sfx/.info.pod
+--[[pod,created="2023-01-24 19:01:56",modified="2025-12-15 18:11:27",stored="2023-01-24 19:01:56"]]
+:: [eoc]

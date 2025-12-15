@@ -56,7 +56,10 @@ else
 	else
 		local ok, err = pcall(boot)
 		if not ok then
-			webWarning("custom_boot.lua error: " .. tostring(err))
+			_printh("** custom_boot.lua error: " .. tostring(err))
+			_printh("** attempting to boot into bios.")
+			store("/distributions/bootinto.txt","bios")
+			_signal(34)
 		end
 	end
 end

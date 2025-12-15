@@ -1,0 +1,356 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: sfx/
+:: main.lua
+--[[pod_format="raw",created="2024-08-07 00:28:37",modified="2024-08-18 07:19:37",revision=1051]]
+--[[
+	capture.p64 by zep
+]]
+
+
+select_mode = false
+select_intention = env().intention
+
+last_mb = 0
+x0 = 0
+y0 = 0
+--win_x = 1
+--win_y = 24
+
+windat = {}
+on_event("modified:/ram/shared/windows.pod", function(msg)
+	windat = fetch"/ram/shared/windows.pod"
+end)
+
+cdat = fetch"/ram/system/capture.pod" or {}
+cdat.x = cdat.x or 0
+cdat.y = cdat.y or 0
+cdat.width = cdat.width or 480
+cdat.height = cdat.height or 270
+cdat.scale = cdat.scale or 2
+
+te={}
+
+local field = {
+	"x","y","width","height","scale"
+	--"frames" -- no need to set frames in this context (use ctrl-9!)
+}
+
+function update_fields()
+
+	cdat.x = mid(0, cdat.x\1, 479)
+	cdat.y = mid(0, cdat.y\1, 269)
+	cdat.width = min(cdat.width\1, 480 - cdat.x\1)
+	cdat.height = min(cdat.height\1, 270 - cdat.y\1)
+
+	for i=1,#field do
+		
+		local val = "-"
+		if (cdat and cdat[field[i]]) then
+			val = cdat[field[i]]
+		end
+		te[i]:set_text(tostr(val))
+	end
+	
+end
+
+
+function capture_screenshot()
+	
+	send_message(3,{event = "capture_screenshot",
+		x = cdat.x, y = cdat.y,
+		width = cdat.width,
+		height = cdat.height,
+		scale = cdat.scale, 
+		frames = nil, -- no meaning
+		delay = 2     -- give time to get out the way (and maybe to react to something happening)
+	})
+
+end	
+
+
+function capture_gif()
+	
+	send_message(3,{event = "capture_video",
+		x = cdat.x, y = cdat.y,
+		width = cdat.width,
+		height = cdat.height,
+		scale = cdat.scale, 
+		frames = nil, -- use default limit 
+		delay = 2     -- give time to get out the way (and maybe to react to something happening)
+	})
+
+end	
+
+function _init()
+
+	if (select_intention) then
+		enter_select_mode()
+		return
+	end
+	
+	-- try to keep window small -- want to see what is being selected!
+	-- also reset select mode attributes here
+	window{
+		x=win_x, y=win_y,
+		width=176,
+		height=100,
+		resizeable=false,
+		moveable = true,
+		has_frame = true
+	}
+	gui = create_gui()
+	
+	local x = get_display():width() - 37
+	local y = 24
+	local y0 = y
+	
+	for i=1,#field do
+		gui:attach{
+			x = x - 34, y = y, width=32, height=10,
+			draw = function(self,msg) print(field[i],0,1,5) end
+		}
+		
+		te[i] = gui:attach_text_editor({
+			x = x, y = y, width=32, height=9,
+			bgcol = 6, fgcol = 1,
+			block_scrolling = true, max_lines = 1,
+			margin_top = 1,
+			key_callback = {
+				enter = function (self) 
+					cdat[field[i]] = tonumber(self:get_text()[1])
+					update_fields()
+				end
+			},
+		})
+		
+		y += 11
+	end
+	update_fields()
+	
+	-- region selection
+	
+	gui:attach{
+		x=4,y=y0,width=96,height=54,
+		cursor = "crosshair",
+		draw=function(self,msg)
+			rectfill(0,0,95,53,6)
+			for i=1,#windat do
+				local w = windat[i]
+				local x0,y0,x1,y1 = w.x\1,w.y\1,w.x\1+w.width\1-5,w.y\1+w.height\1-5
+				x0,y0,x1,y1 = x0\5,y0\5,x1\5,y1\5
+				rectfill(x0,y0,x1,y1,6)
+				rect(x0,y0,x1,y1,13)
+				rect(x0,y0+3,x1,y0+3,13)
+			end
+			rectfill(0,0,95,2,13)
+			rect(cdat.x/5, cdat.y/5,(cdat.x + cdat.width)/5-1,(cdat.y+cdat.height)/5-1,8)
+		end,
+		click=function(self,msg)
+			x0 = msg.mx*5
+			y0 = msg.my*5
+			cdat.x = msg.mx*5
+			cdat.y = msg.my*5
+			cdat.width = 0
+			cdat.height = 0
+		end,
+		drag = function(self,msg)
+			local xx = mid(0,msg.mx*5,475)
+			local yy = mid(0,msg.my*5,265)
+			if (xx < x0) then
+				cdat.x = xx
+				cdat.width = (x0 - cdat.x) + 5
+			else
+				cdat.x = x0
+				cdat.width = (xx - x0) + 5
+			end
+			
+			if (yy < y0) then
+				cdat.y = yy
+				cdat.height = (y0 - cdat.y) + 5
+			else
+				cdat.y = y0
+				cdat.height = (yy - y0) + 5
+			end
+			cdat.width = mid(5, cdat.width, 480-cdat.x)
+			cdat.height = mid(5, cdat.height, 270-cdat.y)
+			
+			update_fields()
+		end
+	}
+	
+	-- buttons
+	
+	local xx=4
+	local spacing = 6
+	local yy=get_display():height()-17
+	
+	xx += gui:attach_button({x=xx,y=yy,label=" Select ", 
+			bgcol=0x0806, fgcol=0x010d,
+			tap=function()
+				enter_select_mode()
+			end}).width + spacing
+	xx += gui:attach_button({x=xx,y=yy,label=" Screenshot ", 
+			bgcol=0x0806, fgcol=0x010d,
+			tap=function()
+				capture_screenshot()
+				exit() -- get out of the way!
+			end}).width + spacing
+	xx += gui:attach_button({x=xx,y=yy,label=" GIF ", 
+			bgcol=0x0806, fgcol=0x010d,
+			tap=function()
+				capture_gif()
+				exit() -- get out of the way!
+			end}).width + spacing	
+			
+	on_event("move", function(msg)
+		win_x = msg.x
+		win_y = msg.y
+	end)	
+end
+
+function _draw()
+	if (select_mode) return draw_select_mode()
+	cls(7)
+	gui:draw_all()
+	spr(1,4,0)
+	
+	cursor(38,4,13)
+	?"\014\^y9ctrl-6 anytime for a screenshot"
+	?"\014\^y9ctrl-8, ctrl-9 to capture a gif"
+	
+end
+
+function _update()
+	if (select_mode) return update_select_mode()
+	gui:update_all()
+end
+
+
+function enter_select_mode()
+
+	select_mode = true
+	
+	poke(0x547d, 0x3f) -- 
+--	poke(0x547e, 0x3f) -- interaction mask (can click on birds!)
+	
+	
+	window{
+		z = 10, -- always on top.
+		
+		cursor="crosshair",
+		
+		-- cover, but not .fullscreen (open in a desktop workspace)
+		width = 480,
+		height = 270,
+		x=0, y=0,
+		moveable = false,
+		has_frame = false,
+		resizeable = false,
+		interactive = true, -- read clicks
+		push_palette = false, -- don't copy display palette to wm
+		push_video_mode = false, -- don't copy video mode to wm
+	}
+end
+
+fr=0
+function draw_select_mode()
+	
+	cls()
+	
+
+	local mx,my,mb = mouse()
+	
+	local pat = 0b1100011000111001
+	fr+=.25
+	pos = (fr\1) % 4
+	pos *= 4
+	pat = (pat << pos) | (pat >> (16-pos))
+	fillp(pat)
+	
+	if (mb > 0) then
+		local x0,x1 = x0,mx
+		local y0,y1 = y0,my
+		if (x1 < x0) x0,x1=x1,x0
+		if (y1 < y0) y0,y1=y1,y0
+		
+		--poke(0x550b,0x3f)
+		rect(x0-1,y0-1,x1+1,y1+1,0x0107)
+--		rect(x0-2,y0-2,mx+2,my+2,0)
+	end
+	fillp()
+end
+
+function update_select_mode()
+	local mx,my,mb = mouse()
+	if (last_mb == 0 and mb > 0) then
+		x0, y0 = mx, my
+		
+	end
+	
+	if (last_mb > 0 and mb == 0) then
+	
+		if (mx > x0) then
+			cdat.x = x0
+			cdat.width = mx-x0+1
+		else
+			cdat.x = mx
+			cdat.width = x0-mx+1
+		end
+		
+		if (my > y0) then		
+			cdat.y = y0
+			cdat.height = my-y0+1
+		else
+			cdat.y = my
+			cdat.height = y0-my+1
+		end
+		
+	
+		if (select_intention == "capture_screenshot") then
+			capture_screenshot()
+			exit()
+		elseif (select_intention == "record_video") then
+			capture_gif()
+			exit()
+		else
+			--store("/ram/system/capture.pod", cdat)
+			select_mode = false
+			_init()
+		end
+	end
+	last_mb = mb
+end
+
+:: .info.pod
+--[[pod,author="zep",created="2024-08-07 00:29:17",icon=userdata("u8",16,16,"00000001010101010101010101000000000001070707070707070707070100000001071919191919191919191907010001071919191919191919191919190701010719190606060606060606191907010107191906080606010106061919070101071919060606010107010619190701010719190606060101010106191907010107191906060606010106061919070101071919060606060606060619190701010719191919191919191919191907010109071919191919191919191907090101090907070707070707070707090901000109090909090909090909090901000000010909090909090909090901000000000001010101010101010101000000"),modified="2025-12-15 18:11:27",notes="shift-ctrl-6 anytime to capture\na region (works in fullscreen too)",runtime=8,title="Capture",version="0.1.1e",workspaces={{location="main.lua#297",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
+:: gfx/.info.pod
+--[[pod,created="2024-08-07 00:28:36",modified="2025-12-15 18:11:27"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI0LTA4LTA3IDAwOjI4OjM3Iixtb2RpZmllZD0iMjAyNC0w
+OC0xOCAwNzoxOTozNyIscmV2aXNpb249ODIxXV1sejQANwEAAMQxAADzIXtbMF09e2JtcD1weHUA
+QyAQEATwVgcQB8AX0BfABxAH8FYsZmxhZ3M9MCxwYW5feAgAx3k9MCx6b29tPTh9LD4A-wkYGAT3
+IjZHNpcWGBYnFhgWhwY4BicGOAYIAA71F_aHlpE3hhGGASc2ERYRRjEWARcmARYBBhEGGAYxBwEG
+ARd2ETZRBwCwJ2YRBhEGUQYBN3EsAP8DJ1EWEYYBN1EmkUdhFiG3sfcqtQALOzV9LPMAH-DmAAwP
+MQC_-wcICAQAF0CHUBcABwAXABcgFwAXUIdwcwAeDzEA-0PxBfc1EMdwdwBXAHcABwAHEAcAdwAn
+BgBvVwB3cPdEfwAeDzEA--------------------------------------------------------
+----9VBtPTh9fQ==
+:: map/.info.pod
+--[[pod,created="2024-08-07 00:28:36",modified="2025-12-15 18:11:27"]]
+:: map/0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI0LTA4LTA3IDAwOjI4OjM3Iixtb2RpZmllZD0iMjAyNC0w
+OC0xOCAwNzoxOTozNyIscmV2aXNpb249NzYzXV1sejQAaAAAAFgQAADwCHt7Ym1wPXVzZXJkYXRh
+KCJpMTYiLDMyAwAvIjABAP--------------------vxCCIpLGhpZGRlbj1mYWxzZSxwYW5feD0w
+CADSeT0wLHRpbGVfaD0xNgoAEHcKAIB6b29tPTF9fQ==
+:: sfx/.info.pod
+--[[pod,created="2024-08-07 00:28:36",modified="2025-12-15 18:11:27"]]
+:: sfx/0.sfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI0LTA4LTA3IDAwOjI4OjM3Iixtb2RpZmllZD0iMjAyNC0w
+OC0xOCAwNzoxOTozNyIscmV2aXNpb249NzYyXV1sejQAoAAAAAsKAAD-MHB4dQADKAAABAAED0AQ
+Ag4AAaABIAKgDgAPEAAN8MoBAgNADw_QBAUGB0AMkAgJCgtADJAPDA8NDw4MQAzw-wEA6-8nqgEQ
+Bg8gEAEgASAB8AACEAIOEAEgDyEgATAPQPDDDygP--DGD-gKD-8PgA-3Dw0B8AkBEAYOMAD-----
+-70f-wEArM-ID0AADxBA--_w8P8BAP-qUP----8p
+:: [eoc]

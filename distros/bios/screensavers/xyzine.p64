@@ -1,0 +1,897 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: sfx/
+:: main.lua
+--[[pod_format="raw",created="2025-01-18 03:48:04",modified="2025-02-18 02:08:34",revision=8394]]
+--[[
+
+	xyzine by zep
+	
+	each page number acts as a random seed
+	there are two additional parameters (px,py) that can be controlled
+	with the dpad / cursors / mouse
+
+	keys:
+		s take a 512x512 screenshot
+		g record a 512x512 gif
+		r toggle risograph mode
+		l capture risograph layers for printing (when in risograph mode)
+		b bookmark page & parameters
+		
+		ctrl-c/v to copy and paste a page snippet
+		(can use this to see the code used to generate that page)
+
+]]
+
+include "title.lua"
+
+-- uncomment to view a particular page (each page is a random gen seed)
+--start_page = 6719726115
+--start_px = 0 --  -127..127
+--start_py = 0
+
+
+page_col = 0
+page_max = 10000000000
+
+-- alt palette using system colours
+-- no way ink combine to form colour 30 though!
+--risograph_display_pal = {[32]=7,[33]=14,[34]=12,[35]=30}
+
+risograph_cols = {[0] = 32,33,34,35}
+
+-- to do: match with available ink
+-- shouldn't be too heavy; maybe use a blue lighter than 12
+risograph_rgb = {
+	0xffffff, -- white (but just use standard white)
+	0xff2080, -- pink (somewhere inside 14,23,8)
+	0x10c0ff, -- light blue
+	0x600070, -- dark, saturated purple leaning on blue side
+}
+
+function enter_bookmark_browsing()
+	if (#bookmarks == 0) then
+		notify("No bookmarks found")
+		return
+	end
+	mode = "gallery"
+	browse_bookmarks = true
+	bookmark_index = 1
+	load_page_str(bookmarks[bookmark_index])
+	bp:clear()
+end
+
+function exit_bookmark_browsing()
+	mode = "gallery"
+	browse_bookmarks = false
+	load_page(rnd(page_max)\1)
+end
+
+function store_settings()
+	store(settings_file,{
+		autoplay = autoplay,
+		risograph = risograph
+	})
+end
+
+function _init()
+
+	autoplay = false
+	risograph = false
+	
+	settings_file = "/appdata/xyzine/settings.pod"
+	sdat = fetch(settings_file) or {}
+	autoplay = sdat.autoplay
+	risograph = sdat.risograph
+
+	mkdir("/appdata/xyzine")
+	screenshots_path = "/appdata/xyzine/risograph"
+	mkdir(screenshots_path)
+	
+	bookmarks_file = "/appdata/xyzine/bookmarks.txt"
+	bookmarks_str = fetch(bookmarks_file)
+	bookmarks = split(bookmarks_str, "\n", false) or {}
+	if (bookmarks[1] == "") bookmarks = {}
+	load_page(rnd(page_max)\1) -- for title
+
+	vid(0)
+	window{
+		cursor=0
+	}
+
+	menuitem{
+		id=1,
+		label = function()
+			return browse_bookmarks and
+				"Delete Bookmark [DEL]" or
+				 "Bookmark Page [B]"
+		end,
+		action = function()
+			if browse_bookmarks then
+				delete_bookmark()
+			else
+				add_bookmark()
+			end
+		end
+	}
+
+	
+	menuitem{
+		id=2,
+		label = function()
+			return browse_bookmarks and "Exit Bookmarks" or "Browse Bookmarks"
+		end,
+		action = function()
+			if (browse_bookmarks) then
+				exit_bookmark_browsing()
+			else
+				enter_bookmark_browsing()
+			end
+		end
+	}
+
+	menuitem{
+		id=3,
+		label = function()
+			return "Autoplay: "..(autoplay and "On" or "Off")
+		end,
+		action = function ()
+			autoplay = not autoplay
+			store_settings()
+			return true
+		end
+	}
+	
+	menuitem{
+		id=4,
+		label = function()
+			return "Risograph: "..(risograph and "On" or "Off")
+		end,
+		action = function ()
+			risograph = not risograph
+			switch_page(0)
+			return true
+		end
+	}
+	
+	bp = userdata("u8",256,256)
+	
+	if (env().screensaver) then
+		mode = "gallery"
+		autoplay = true
+	else
+		init_title()
+	end
+	
+end
+
+		
+local op,val,expf,bfreq={},{},{},{}
+
+function get_op()
+	if (#op == 0) op = {"+","+","-","*","\\","~","&","|", "%"}
+	return del(op,rnd(op))
+end
+
+local val={}
+
+function get_val()
+	if (#val == 0) then 
+	
+		-- bread and butter values
+		val = {
+			"(x-px)","(y-py)",
+			"abs(x)", "abs(y)",
+			"x","y","x","y",
+			"3", -- interesting number; should appear more often
+			flr(1+rnd(4)),flr(1+rnd(8)),flr(1+rnd(16)),flr(1+rnd(64))
+		}
+		
+		-- wildcards; normally don't want more than a couple in same tree
+		-- they tend to generate a prominant feature that might combine
+		-- with another feature, but beyond that too many layered concepts
+		-- that start competing with each other
+		local freq = 12 -- 12 is good
+		if (rnd(freq)<1) add(val, "flr(sqrt(x*x+y*y))")
+		if (rnd(freq)<1) add(val, "(x*x+y*y)")
+		if (rnd(freq)<1) add(val, "flr(sqrt((x-px)^2+(y-py)^2))")
+		if (rnd(freq)<1) add(val, "max(abs(x),abs(y))") -- plus
+		if (rnd(freq)<1) add(val, "min(abs(x),abs(y))") -- squares
+		if (rnd(freq)<1) add(val, "(abs(x)+abs(y))") -- diamond
+		if (rnd(freq)<1) add(val, "(max(abs(x),abs(y))+min(abs(x),abs(y))\\2)") -- oct
+		if (rnd(freq)<1) add(val, "(x&y)")
+		if (rnd(freq)<1) add(val, "(x|y)")
+		if (rnd(freq)<1) add(val, "((x*x)>>7)")
+		if (rnd(freq)<1) add(val, "((y*y)>>7)")
+		if (rnd(freq)<1) add(val, "sgn(x)")
+		if (rnd(freq)<1) add(val, "sgn(y)")
+		
+		
+	end
+	return del(val,rnd(val))
+end
+
+function get_bfreq()
+	if (#bfreq == 0) bfreq = {1,2,2,3}
+	return del(bfreq,rnd(bfreq))
+end
+
+---
+function exp_a_op_b(a, b) 
+	return a..get_op()..b
+end
+
+function exp_max(a, b) 
+	return "max("..a..","..b..")"
+end
+
+function exp_min(a, b) 
+	return "min("..a..","..b..")"
+end
+
+function exp_cos(a,b)
+	return "flr(cos("..a.."/"..b..")*"..get_val()..")"
+end
+
+function exp_atan(a,b)
+	return "flr(atan2("..a..","..b..")*"..get_val()..")"
+end
+
+function get_expf()
+	if (#expf == 0) then expf = {
+		exp_a_op_b,exp_a_op_b,exp_a_op_b,exp_a_op_b, -- bread and butter
+		exp_max,exp_min,exp_cos,exp_atan
+	} end
+	return del(expf, rnd(expf))
+end
+
+
+function exp(depth)
+	
+	-- sometimes want short branches
+	if depth > get_bfreq() then
+		return get_val()
+	end
+	
+	local a = exp(depth+1)
+	local b = exp(depth+1)
+	
+	local ff = get_expf()
+	
+	return "("..ff(a, b)..")"
+	
+end
+
+
+function page_to_str()
+	return pod({
+			page=page,
+			px=px,py=py,
+			cols=cols,
+			src=src
+		},0,{pod_type="xyzine"})
+end
+
+
+function init_page()
+	
+	px1, py1 = px, py
+	
+	dpx, dpy = 0, 0
+	last_mx, last_my = mouse()
+	local ff = load(src)
+	--if (ff) 
+	if (not ff) printh("bad ff! "..src)
+	ff()
+	gen_t = t()
+	tt = 0
+	
+end
+
+function load_page_str(str)
+
+	local dat,meta = unpod(str)
+	
+	if (type(dat) ~= "table" or not meta or meta.pod_type ~= "xyzine") then
+		notify("not an xyzine page")
+		return
+	end
+	
+	if type(dat.page) ~= "number" or
+		type(dat.px) ~= "number" or type(dat.py) ~= "number" or
+		type(dat.cols) ~= "table" or type(dat.src) ~= "string"
+	then
+		notify("xyzine page format not recognised")
+		return
+	end
+	
+	local test_f = load(dat.src)
+	if (not test_f) then
+		notify("snippet could not compile (bad bbs encoding?)")
+		return
+	end
+	
+	page,px,py,cols,src = 
+		dat.page,dat.px,dat.py,dat.cols,dat.src
+	
+	init_page()
+	
+end
+
+function load_page(page_p)
+
+	page = page_p
+	srand(page)
+	op,val,expf,bfreq={},{},{},{}
+	
+	src = "function f(x,y)return"..exp(0).."end"
+	gen_pal()
+--	if (rnd(2)<1)gen_title_pal()
+--	gen_title_pal()
+
+	px, py = 0, 0
+	
+	ease_x0 = rnd(200)-100
+	ease_y0 = rnd(200)-100
+	ease_x1 = rnd(200)-100
+	ease_y1 = rnd(200)-100
+	
+	init_page()
+	
+end
+
+function gen_pal()
+
+	cols = {}
+	-- 2,3 mostly likely to work well
+	num_cols = rnd{2,2,2,3,3,3,4,5,6,7}
+	
+	for i=0,num_cols-1 do
+		cols[i] = rnd(32)\1
+	end
+	
+	-- half of them have black as first colour
+	if (rnd(2)<1) cols[0] = 0
+	-- even pages have a curated "safe" palette (mostly warmer colours)
+	if (page % 2 == 0) then
+		cols[0] = rnd{0,1,5,18}
+		for i=1,#cols do
+			cols[i] = rnd{
+				6,7,8,9,12,13,14,15,
+				16,22,23,24,25,29,30,31
+			}
+		end
+	end
+	
+end
+
+
+function _draw()
+	
+	cls(page_col)
+	
+	if (mode == "title") then
+		draw_title()
+		tt+=1
+		return
+	end
+	
+	blit(bp,nil,0,0,240-128,135-128)
+	
+
+	if(imgi ~= last_imgi) flip()
+	last_imgi=imgi
+
+	local q = (tt*2)%9
+	
+	local cols1 = risograph and risograph_cols or cols
+	local num_cols = #cols1+1
+	for x=-128+(q\3),127,3 do
+		for y=-128+(q%3),127,3 do
+			bp:set(x+128,y+128,cols1[f(x,y)%num_cols])
+		end
+	end
+	
+	
+	tt+=1
+	
+	for i=1,#risograph_rgb do
+		pal(31+i, risograph_rgb[i], 2)
+	end
+	
+	-- remap palette (don't use custom colours)
+	if (risograph_display_pal) pal(risograph_display_pal,1)
+
+
+end
+
+function switch_page(dpage)
+	if browse_bookmarks then
+		bookmark_index = mid(1, bookmark_index + dpage, #bookmarks)
+		load_page_str(bookmarks[bookmark_index])
+	else
+		load_page(page + dpage)
+	end
+end
+
+function delete_bookmark()
+	if (#bookmarks == 1) then
+		bookmarks = {}
+		rm(bookmarks_file)
+		init_title()
+		notify("No More Bookmarks")
+	else
+		deli(bookmarks, bookmark_index)
+		switch_page(0)
+		notify("Removed Bookmark "..bookmark_index.." / "..(#bookmarks + 1))
+	end
+	store(bookmarks_file, table.concat(bookmarks,"\n"))
+end
+
+function add_bookmark()
+	add(bookmarks, page_to_str(), 1)
+	store(bookmarks_file, table.concat(bookmarks,"\n"))
+	notify("Added Bookmark")
+end
+
+-- bits 0x1 (pine) 0x2 (blue)
+function store_risograph_layer(bits)
+	local big = userdata("u8",1024,1024)
+	for x=0,1023 do
+		blit(bp,big, x\4,0, x,0, 1,256)
+	end
+	for y=1023,0,-1 do
+		blit(big,big, 0,y\4, 0,y,  1024,1)
+	end
+	
+	--> black and white (7)
+	big:band(bits,true)
+	if (bits == 0x2) big:shr(1, true)
+	big:add(62,true) -- 62 (no ink: white), 63 (ink: black)
+	pal(62,0xffffff,2)
+	pal(63,0x000000,2)
+
+	local fn = screenshots_path.."/xyzine_"..flr(page).."_"..px.."_"..py
+	
+	fn ..= (bits == 0x1) and "_pink.png" or "_blue.png"
+	store(fn, big)
+	return fn
+end
+
+--[[
+	store_risograph_preview
+	** always uses custom colours
+	(could to do a :take based on risograph_display_pal)
+]]
+function store_risograph_preview()
+
+	local big = userdata("u8",1024,1024)
+	for x=0,1023 do
+		blit(bp,big, x\4,0, x,0, 1,256)
+	end
+	for y=1023,0,-1 do
+		blit(big,big, 0,y\4, 0,y,  1024,1)
+	end
+	
+	local fn = screenshots_path.."/xyzine_"..flr(page).."_"..px.."_"..py..".png" 
+	store(fn, big)
+	notify("stored preview: "..fullpath(fn))
+end
+
+function show_risograph_layer(bits)
+	local bp2 = bp:copy()
+	bp2:band(bits,true)
+	if (bits == 0x2) bp2:shr(1, true)
+	bp2:add(62,true) -- 62 (no ink: white), 63 (ink: black)
+	pal(62,0xffffff,2)
+	pal(63,0x000000,2)
+	blit(bp2,nil,0,0,240-128,135-128)
+	flip()
+end
+
+
+function take_screenshot(name, scale, silent)
+	send_message(3,{event = "capture_screenshot",
+			x = 240-128, y = 135-128,
+			width = 256,
+			height = 256,
+			scale = scale,
+			delay = 2,      -- give time to get out the way
+			name = name,
+			silent = silent
+		})
+	-- give wm time to process it
+	for i=1,5 do
+		flip()
+	end
+end
+
+function _update()
+
+	if (mode == "title") then
+		update_title()
+		return
+	end
+	
+	mx,my,mb = mouse()
+	
+	if autoplay and t() > gen_t + 6.0 then
+		load_page(page+1)
+	end
+
+	-- save screenshot (to do: also from menu)
+	if keyp("s") then
+		-- shift-s for 1024x1024 -- good for social media but maybe not bbs sharing
+		-- default: 512x512 so that consistent size in thread
+		take_screenshot("xyzine_"..flr(page), key"shift" and 4 or 2, false)
+	end
+	
+	if (risograph and keyp("l")) then
+		local fn
+		
+		show_risograph_layer(0x1)
+		take_screenshot("xyzine_"..flr(page).."_pink", 4, true)
+		show_risograph_layer(0x2)
+		take_screenshot("xyzine_"..flr(page).."_blue", 4, true)
+
+	end
+	
+	if (keyp("r")) then
+		risograph = not risograph
+		store_settings()
+	end
+	
+
+	-- record gif	
+	if keyp("g") then
+		send_message(3,{event = "capture_video",
+			x = 240-128, y = 135-128,
+			width = 256,
+			height = 256,
+			scale = 2, 
+			frames = 30*16, -- 16 seconds
+			delay = 2,       -- give time to get out the way
+			name = "xyzine_"..flr(page)
+		})
+	end
+
+	
+	if (mx ~= last_mx or my ~= last_my) then
+		last_mx = mx  last_my = my
+		px1 = mx - 240
+		py1 = my - 135
+		dpx, dpy = 0, 0
+	end
+
+
+	if (key("ctrl") and keyp("c")) then
+		set_clipboard(page_to_str())
+	
+		notify("Copied page as text. (CTRL-V to paste)")
+		clear_key("c")
+		-- to do: how to clear button?
+	end
+	
+	if (key"ctrl" and keyp"v") then
+		load_page_str(get_clipboard())
+		clear_key("v")
+	end
+	
+	if keyp "b" and not browse_bookmarks then
+			add_bookmark()
+	end
+	
+	if keyp"del" and browse_bookmarks then
+			delete_bookmark()
+	end
+	
+	-- only process buttons 4,5 while ctrl is not held (avoid ctrl-x/c/v conflict)
+	if (not key"ctrl") then
+	
+		if (btnp(4) or (mb==1 and last_mb==0)) switch_page(-1)
+		if (btnp(5) or (mb==2 and last_mb==0)) switch_page( 1)
+	end
+
+	local accel = 0.2
+	if (btn(0)) dpx -= accel
+	if (btn(1)) dpx += accel
+	if (btn(2)) dpy -= accel
+	if (btn(3)) dpy += accel
+	
+	
+	px1 = mid(-128, px1 + dpx, 127)
+	py1 = mid(-128, py1 + dpy, 127)
+
+	dpx *= .9
+	dpy *= .9
+	
+	if autoplay then
+		-- use t() -- tt might be running slowly if program happens
+		-- to run at less than 30fps
+		
+		local q = t() - gen_t
+		
+		q = mid(0, (q-2)/2, 1) -- start at 1 sec and take 2 seconds to ease
+		
+		if (q < 0.5) then
+			q =((q*2)^3)/2 -- 0 .. 0.5
+		else
+			q = 1-q
+			q =((q*2)^3)/2
+			q = 1-q  --> 0.5 .. 1.0
+		end
+		
+		
+		px = ease_x0 * (1-q) + ease_x1 * (q)
+		py = ease_y0 * (1-q) + ease_y1 * (q)
+		px = flr(px)
+		py = flr(py)
+		
+	else	
+		px = flr(px1)
+		py = flr(py1)
+	end
+	
+	last_mb = mouse_b
+	
+end
+:: .info.pod
+--[[pod,author="zep",bbs_id="xyzine",created="2025-01-18 03:48:29",icon=userdata("u8",16,16,"00000001010101010101010101000000000001070707070707070707070100000001070d0d0d0d0d0d0d0d0d0d07010001070d010606010d0d010606010d070101070d010606010606010606010d070101070d060707060606060707060d070101070d010101010d0d010101010d070101070d010101010d0d010101010d070101070d070706060707060607070d070101070d010601010606010106010d070101070d010601010606010106010d07010106070d0d0d0d0d0d0d0d0d0d07060101060607070707070707070707060601000106060606060606060606060601000000010606060606060606060601000000000001010101010101010101000000"),lowcol_icon=true,modified="2025-12-15 18:11:28",notes="A procedural zine generator\n",runtime=13,sandbox="bbs",title="XYZINE",version="1.0",workspaces={{location="main.lua#37",workspace_index=1},{location="title.lua#11",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
+:: gfx/.info.pod
+--[[pod,created="2025-01-18 05:06:49",modified="2025-12-15 18:11:28"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTE4IDAzOjQ4OjA0Iixtb2RpZmllZD0iMjAyNS0w
+Mi0xOCAwMjowODozNCIscmV2aXNpb249NzEzNl1dbHo0AA8GAADdWQAA8it7WzBdPXtibXA9cHh1
+AEMgEBAE8FYHEAfAF9AXwAcQB-BWLGZsYWdzPTAscGFuX3g9LTMuNTcxNDI4BgARNhcAOXk9MBYA
+ujU3LHpvb209N30sXAAv9-BPADr-EOEH0RfBJ7E3oUeRV4FncXdhh1GXQacxtyHHEdcB9w9sADr-
+EQfhF9EnwTexR6FXkWeBd3GHYZdRp0G3Mcch1xHnAfcAbQA6H-AoATj-BCAYBPAzHxUVHxYWF5Af
+Hx8PF1AOAAAh8AoHAEPQHB8cEgBJHw8XkA4A8QPwGhsfGhfwChseF-AWHxUfFBRAAHxwHw4fFxdQ
+EQAEIwBSGRkacBlnAAgPAHDwGBIfGB8eKwBqcB8dFhdwDwBg8BYSHxgYDwB6F3AYHw4XUA8AL-Az
+bwE78QYlSZAZPxkJcFkeCWAJDw9JDglgCQ0GAK8dWXAJPRmQSfBGcgA88QVIkBg-GAhwWB4IYAgP
+DkgOCGAIDQYAjx1YcAg9GJBIcgA5-wEICASAF1A3MFcQVxA3MBfAzAA6H-HVAzv-EfcAAecR1yHH
+MbdBp1GXYYdxd4FnkVehR7E3wSfRF_EHbQA7-w8PAdcRxyG3MadBl1GHYXdxZ4FXkUehN7EnwRfR
+B_HVA4qSUhEfEx8QcNEwCADwCE8TABIAHxIAFfACEwAfEAAfGAAdAB8WHgCiE3AfGwAcABgARg4A
+8w8bAB8cAB8OAB8a8AsfFwAaABowER8SHdAfDwAZABkMAPEGHwAfGQAe8AhEABQwERIfGNBPFAAX
+CgCAcN8V8BQVHwU2BAIHAO8qFRcUHx-wCBUXFBzwhucAN3MoGATwUNGw6QADCADhHxIAHxMATgAS
+8AofEgDsAPMFEwAfGLARHhNwHw0AHxEAHAAfGwARAPAMHQBPHAAbAB8O8AoXAEcAHxoAHxewER8S
+Hw1wEAAkGgAOAPECFgAfDwAfFwAZAB8P8AoWAB0iAVEZAB8fsPUAc08WAB8eAEQNABAFawFxTxTw
+Ct8VsAQBInDVCAAh8DroBDMf8BAIAB_uRQJMkTEuNDM4MDk1MgYAEzNPADUtMC4UAAEaAANRABw2
+UQD-AQfRJ7FHkWdxh1GnMccR94dfADxK8XDHIQIAD2EAPAr0Bx_PXgA8C_YHH4BfACwPzgFOP-8S
+8KMAPQ9RAI7-AfeHEccxp1GHcWeRR7En0QdfAJwagO8GD18APRmP4QYPHQI_D1EA-zDzECCRQAGX
+ASABBw0BfQcBAAEHDQYRZg0HEQcNBgEGAVYKADIWAUYKACJBNggAJFEmJABDIQYBFgwAUBYRFgEG
+DAD-Cx2BDQcRBgedBwYRFpcWAQABtgEgAZYBQJEgvgBFEp28ABKWigBTIQYNBg2WAGIRBwYHBg2Y
+AACwAFMNBg0GEQ4AAQIAEyENAAAoABYxGQASQQsAH5bKAGSRAQYHARcBBwYBhgAhARYCAAIMAEAH
+BgEXHwABDgA5Nh02CAAKHgAJOAAHUgAP0gBhFjHPABUxlQAfMcoACTINMQ0cAFAdFj0GLRQAXxEH
+MQcRkgFyIQcdAgAOdAEPkgEMIQYdAgAPkgFiJfAjcgATUMAAFVCeAEFQNh02BAAGEgADrAAVUDYA
+L-BDkgA_lQYBBwYXBgcBBpIAAA0AEBcXAEFQMR0xBAAGEgAhAR0CABVQNgAv8EP2AUwFagAN9gEF
+lgABDgA5MR0xCAAKHgADuAACGgAHUgAPyAJhHZGSAD82FzbEAAIRlwYAYgENER0RDSoAXxYdFh0W
+uABpfx0XDRcNFx22ABsGDAAPuABacQEWAR0BFgG_ABIRDAACzQRADRYNFsMAXxYXNhcWwwAA8QIG
+FxYXFhcGBxEHEQYRFhEGEQoAMB0WHQoAADoCABUAHwGBAV4fAcQAAX8NBhc2FwYNxgAAEQ3GAAPp
+BAGyAAMMAADJAA6NAQ-EAF4ADAAFiAYPxgAfBAwAD7kFUh-wUQD-------------------------
+---------------------------------------------------------------dUG09Nn19
+:: label.qoi
+b64$cW9pZgAAAeAAAAEOBAH9-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f3v-v-x6P4AAADs
+-imt-zXOPzXsCjXdCv7-owD_wsPHCj87wD871zXdCjXdCt813QrfNf390j-_X1dPNeouCjXOIcA1
+6i4KNdw7PyE7wAohO8AKO9Y13ArANdwK4DXcCt81-f3TP8AuNegKwC41zi4-OzXoCsAuNdsKPzs-
+wDvACjvYCjXbCsE12wrhNdsK3zX9-dQ-wCE-NeYKwjXOPyE-wDXmCsEuNdouPyE7CsAhOwrAO8AK
+O9U12grCNdoK4jXaCt81-f3VPyE-wCE15ArDNc4-Cj-ALjXkCsM12QohP8AKIQrAPwrAPwrBOwo7
+ywo7wArCNdkKwzXZCuM12QrfNf391i4KPyE-wDXiCsIuCjXOIS4-wCE-NeIKwi4KNdg-wAo-Cj8h
+CsEhCsQ7zQo7CsI12ArENdgK5DXYCt81-f3XP8A7P8AuPzXgCsQhNc4-wCHAPwo-NeAKxDs11wo7
+PwouPwo-wArEOwrBO8wKwDsKwTXXCsU11wrlNdcK3zX9-dg-Oz-ALj8uwDXeCsU7Nc4-IT-CLj81
+3grFLjXWP8A7Py4-IQrBIQrEOwrAO80KO8AKwDXWCsY11grmNdYK3zX9-dk-LsA-Lj-ALj813ArH
+Nc4hOz-AIT-ALiE13ArHNdUKwC7ACiE-wC4hCsA-CsA-CsE7CsE7zArAOwo11QrHNdUK5zXVCt81
+-f3aITs-wCE-Lj8hLjXaCsY7CjXOLjs-Oz-ALj8uwDXaCsYuCjXULj8KLj-ACj8KPyEKwSEKxDsK
+wTvMCsA7NdQKyDXUCug11ArfNf392y4-IcA-wCE-OyE-NdgKyD81zi4-Lj-ALj8uOz8uNdgKyC41
+0wo7Py4KOz8KLj8KP8AKxDsKwTvNCjsKwTXTCsk10wrpNdMK3zX9-dwKIT8hPyE-wSHAPzXWCsku
+Nc4-LiE-Lj8hLj8uIQo11grKNdI-wAo7P8A7Py4-IQrBIQrEOwrAO9AKwDXSCso10grqNdIK3zX9
+-d0-wyE-wCEKPyE-NdQKyzXOPyE7P8AhPy4hPy4-LjXUCss10T-ALj8KwC7ACiE-wC4hOz-AO8A-
+O8EKO8EK0DXRCss10QrrNdEK3zX9-d4hPyE-IcA-wDsKP8AhCjXSCso-CjXOPy4hPyE-Lj8hLgo-
+IT810grKLgo10C4hwC7APwouP8AKPzs-ITvACiE7wAo7wQo7wQrPNdAKzDXQCuw10ArfNf393z-A
+OyE-wCHAPyHAPyEKPzXQCsw-Nc4uP8AhP8AhPy4hP8EuPzXQCswhNc8-CsA-Cjs-wAo7PwouPzsK
+PzvACjvBCjvBCtI1zwrNNc8K7TXPCt81-f3gCiE-IT-AOwo-OyEKPyEuCjXOCs0-Nc4KP8AhPyE-
+wSHAP8AhCsA1zgrNLjXOCiHACi4-Cjs-wDs-Lj8hOwrAITsKwDvACsA7wArAO8AKzjXOCs41zgru
+Nc4K3zX9-eE-Oz-AOyE-OyEuPyEuPyEuPzXMCs81zj-DIT-AIQouIT-BCjXOCs417grONc4KzjXO
+Cs41zgrONc4KzjX9-fM7ITs-IS4-Oy4KOyE-CiEuCjXKCs4-Nc8hPyE-IcA-wQrAPyE-CiE1zgrO
+Ne4KzTXPCs41zgrONc4KzjXOCs41-f30Oz-AOyEuOyEuCiEuCsAuCsA1yArPNdA-wDshP8AhwD8h
+Cj8hCsE1zgrNITXuCsw10ArONc4KzjXOCs41zgrONf399SEuPyEuPzs-wDshPwohLiEKNcYKxDsK
+yDXRCiHBP8A7P8EhP8AhLgo1zgrONe4KyzXRCs41zgrONc4KzjXOCs41-f32IT-AOz-AOyE-IcAu
+PwouCsA1xArAOwrMNdIhOz-AOyE-wCEuPyHAPyEKNc4KzjXuCso10grONc4KzjXOCs41zgrONf39
+9yE-IcAuPyEKwT8KwT8hCjXCCsg7CsQ10y47IcA-IS4hOwo-OyEKwCE1zgrMOwo17grJNdMKzjXO
+Cs41zgrONc4KzjX9-fg-wDsKP8AhCj8KLj8KwzXACsA7CsA7Csk11Ds-OyE-OyEuPyEuPyEuPwo1
+zgrNOzXuCsg11ArONc4KzjXOCs41zgrONf39_Qo-IQo-IT8KwT-ACsA-CsA-CsA7CsQ7CsA7CsE1
+1Qo7IcAuPzsuPzshPzshLgo1zgrNOzXuCsc11QrONc4KzjXOCs41zgrONf39_gohwArAP8AKPwo-
+wArAPwrEOwrAOwrAOwrCNdY-IS4-OyE-OyEuOyEuPyEuNc4KzjXuCsY11grONc4KzjXOCs41zgrb
+Nf397j-AIT-ACsAhCsEhCsA-CsA7CsA7CsQ7CsA11yE7IS4hwC4-IS4-OyEKwCE1zgrMLgo17grF
+NdcKzjXOCs41zgrONc4K2zX9-e8hwD8KIQo-wArAPwrAOwrAO8AKwDsKwDsKwDsKNdg7PyE-wDs-
+wDshLj8hLgrANc4KzS417grENdgKzjXOCs41zgrONc4K2zX9-fA-Lj8uCsAhPwrAPwrAPwrAOwrA
+OwrBOwrANdk-wSEuPyEuPzs-wDshPwo1zgrNLjXuCsM12QrONc4KzjXOCs41zgrbNf398Ts-Ci4-
+CsA-CsA-CsA7CsA7wAo7wArAOzXaIcAuPyE-wCE-wDshP8AhLjXOCs417j-CNdo-zjXOP841zj-O
+Nc4-2zX9-fI-Cj8hCsAhwArAPwrAOwrAOwrAOwrANdshOyE-IcAuPyEuPzshPwohNc4KzDsKNe4-
+wTXbP841zj-ONc4-zjXOP9s1-f3zPwrAPwrAPwrEOwrAOwrAOzXcOz87IT87IS4-IS4-IQo-CjXO
+Cs417j-ANdwhPyE-wCE-IcE-IcA-IT81zj-BIT-BIT-AIcM-Nc4-ySE-wSE1ziHRP8AhwD-AIcA-
+wDX9-fQKwD-ACsAhCsA-CsY13QohPyE-wDsKP8AhP8AhLgo1zgrNLjXuPzXdIT8hP8QhP8AhP8Ah
+Nc4-xSE-wCHAPyHAPzXOP841zj8hwT-BIT-TNf399C4-Ci4KyDsKwTXdPzs-wSE-wCEKPyE-wQo-
+Ci4K2zXdLjXuP8AuP8AuP8AuwD8uP8AuPzXOP8AuPy7AP8AuP8AuPy7APzXOLsA-Lj-ALsM-Lj-A
+LjXOPy7APy4-wC4-LsA-Lj-ALjX9-f3CCiE-CsAuCsE-Csg13T8hwD8hPyE-Lgo-IT8KP8AKwC4K
+wT8K1C413TshNe4-wiE7Lj87P8A7P8A7PzXOP8A7P8AuP8AuPy7APzs-wDXOPzs-wDs-Ljs-Oz-A
+Lj87LjXOPzs-wDs-LsA-Oz-ALj8uwDX9-f3BLj8K0jXdPyE-LiE-Lj8uCj8uPwo-Cts13Qo-ITXu
+P8AuIT8hP8AhPyEuPyHAPzXOPyHAPyHAPy4hwC4-wC4-ITXOIcEuIcE-IcEuwCEuPzXOPy4-IS4-
+LiHALj8hwS4hNf39-cA-IS4KIcA-Cs813T8uPy7APyE-Ci4-Lgo-wQo-CtY13QohLiE17iEuPyEu
+IT8hP8E7Py4hPzXOIT8hP8AhPy4hPy4-wDs-wDXOIcE7IT87P8A7PzvAPy4-Nc4hPyE-wCE-IcA-
+IT8hwjX9-f0hCsAhCsE-CsE-Csw13SHAPwo-IQo-wAo-wQo-CsE-CtM13QouCsAuNe4hPzs-yAo-
+wDXOPwo-wArAPwrDP8AKPzXOP8AKP8AKP8AKwD8KwD8KwDXOCj8KwD-ACj-ACj-ACsA-CjX9-fwK
+IcA-CiEKwT8KwT8KzDXdP8EKPwouP8AKIT8KwD-ACsA-CtE13T8KwD8uCjXuIT-AIcA-wCE-wAo-
+wC7APzXOPy7APy4KLsE-wAo-wjXOP8AKP8AKLj8KwC4KwD-ACjXOCj-ACj-ALj-ACi4-CsA-LjX9
+-fs-wi4-Ci4K1DXdIT8uCj-ALsA-Ci4-CsA-CtM13QrAPwrBOzXuP8QhCj8hCjshOwo7Nc4hCsA7
+CsA-IQo-IT-AIcAKNc4-wAo7PwrAOwrAOyE7wCHANc4KIcAKP8AKwD8KwD8KwD-ANf39_j8uIQou
+P8AKPy4KwC4-CtA13Ts-LiE-LsEKwCE-Ci4-CsA-Cs413QrFITXuP8EhP8EuPwo7CsA7Lgo1ziEu
+CsAuCsAhCj-AIQo-IS41zj-BCj-ACsA-CjshO8AhwDXOCj-ACj-ACsA-CsA-wAo-wDX9-fkuPy4K
+Py4-wC4-Cj8KwT8K0DXdO8AKwCHALj-ACj-ACsA-Cs813QrHNe4hLsA-CsA-CsAuCsAuwjXOLsAK
+Lj-ALj-ALj-ALgo-LjXOCsAuwAouCsAuPwouPy7APzXOLgo-LgouwAouwAouP8AuwDX9-fg-wCE-
+CiHAPwo-LgrAP8AKwDXACs813T-ACjs-CsA-CsA-wArAIQrNNd0KxjsKNe4hCi4hPwouPy4hwC7A
+P8AuNc4hwD8uP8A7P8AuCj8uwjXOOy4hOy7APwouPzsuPzsKPzXOLgouPwouwDsuIT8uIT8uwDX9
+-fcKPyEKP8MKwD8KwT8KNcIKzzXdP8AKPyEKOz8KwD8KzzXdCsghNe47PzsuPy7AOy47PyE7PyEu
+Nc4uPyEuPyHACiHACjshCi47Nc4hO8A-O8A-Ljs-Lgo-Lgo7Nc4hwDvAITvAITvAIS47IcAKNf39
+9j8hCj-AOz-ACiE-CsA-CsAuNcQKzzXdPy4KIQrAOz8KLiEKwD8KyjXdCsk7Ne4KIT8hP8A7P8A7
+P8A7P8AhNc4hPyE7P8AhCj8hLsAhLsA7Nc4hOyE-LiE-LiE-Lgo-LgrANc4hwDvAITvAIS47Pzsh
+PzsuNf399T87IT8uPyHACj-ACi4-Ci4-NcYKzzXdOz8KLiEKP8AKwD8KyzXdCss17j8KLj8KP8AK
+P8Y1zgrONc4-Cj-ACsA-Csc1zj-DCj-ACsA-CsM1-f30LsAhCjs-Oy4-IQo-Ci7ACsA1yArPNd0-
+Cj8hCsE-CsA-Csk13QrKPwo17iE-wCE-yjXOPwrAPwo-wAo-CsA-wgo1zj-DCj8KxD8KPzXOP8AK
+P8EKP8EKwD8KPwo1-f3zPyEKPy7AOwrAIT8KLiEKP8A1ygrPNd0-Cj-ACs413QrMITXuOz8hwD8h
+PyHAPyE-IT8hwDXOP8AKP8AKwD8KwD8hCj8hPzXOPwrAPwrAP8AKP8AKP8I1zj-ACj-ACsA-CsE-
+CsE-Nf398gohPwo-wDs-wAo7PwrAIQrANcwKzzXdCiE-IQouPwrJNd0KzT817j8hwD-EIT-AIT8h
+PzXOP8EKP8AKP8AKPyEKPyE-Nc4-Cj-ACj-JNc4-wAo-wAo-yDX9-fI-Oz-ACsA-CsA-wAo-wAo-
+Nc4KzjXePwouCss13grPLgrALsAKLsEKLsEKLsEKwS4KyDXOPy4-wC7APy4-xjXOCi7ACi7ACi4-
+wC4-wC4-wDXOLsAKwC4KLsAKLsAKLj8KLjXOCsAuCi7ACsAuCsAuCi7ACi4-Ci4-LsA-Lj-ALj8u
+wD8uNf394T-ACiE-Lj8hCi4-wAo-CjXQCs013i4KwCE-Csk13grMLgrALsAKwC7ACj8uwAo-Ci4K
+PwrCP8MKLsI1zy7AO8AhP8UuPzs1zwouwAouwD8uP8A7P8AuPzXPPy4-wC4KLsAKLj8KLj8uNdA-
+Ljs-Lj8KLgouwAouPwouPzsuPzs-wDs-Ljs-Owo-Owo1-f3gOz-AOz8uCiEuCj-ACi410grMNd4K
+wj8KyTXeCs0uCsEuCj8KLsA-CsAuP8AKLsA-wC7INdAuP8AhPyEuwCEuIT8uwDXQPy7APy4-IS4-
+IcA-IcA10D8uPy7APy4-wC4-IS4-NdIuCj8uPy7APy4-Ci4-LsA-Lj-ALj8uwD8uIT8uCj8uCi41
+-f3fCi4hCi4-wC4-Lgo-LjXUCss13iE-CsAuPwrINd4KzT8KwT8KwC4-Ci7APyEuwD8hLsEhwC7A
+P8AhwD810T-AIT-BLsA-OyEKITXRPy4hwC4-ITs-wCE-wDXRPy4-LsA-Lj-ALj-ALjXUP8AuPy7A
+Py4-Ci4-LsA-Lj-ALj-BIT8hwD8hP8AhPyE1-f3ePy4KPy4-wC4-IcAKNdYKyjXeCsAuCsE-Csc1
+3grPIQrAIcAKIcE-IcE-IcE-wSE-xDXSPwo-wArAPwrAPwrANdI-wCE-xAo-wDXSIcAKIcA-IcA-
+wCE-NdYhwAohwD8hwD-AIT-DCsA-wArAPwrINf393SHACiHAP8EuP8A12ArJNd4uCsAuPwrAPwrG
+Nd4KzCEKwCHACsAhwAo-IcA-wSE-wSE-xjXTLsAKOyEKP8EKPzXTP8QKP8AuwDXTIcM-wCE-wTXY
+IcI-wCE-wSE-wAo-wC4KPy7APwrBPwrBIQrAITX9-dwKPyEKPyE-CiEKNdoKyDXeCs413grNIQrA
+PyEKIT8hPyE-wSHAP8EhwD-BIT-ANdQuPwrAPwo-Lj8KNdQ-wCEKPyEKOyE7NdQhwD8hwD8hwD8h
+NdohxzshwDsKITvACjvAPwrAPwohCsAhwAohwDX9-dsKwD-ACj8hLgo13ArHNd4Kwz8KyDXeCs0h
+CsEhCsA-IQohP8EhP8EhP8IhPwo11Qo-wiEKLj811T-AIQo-wC4KPzXVIcE-IT-AIcA13CHGOyHA
+LsA-LsA-LsA-wC4-CiEKwCHACiHAPzX9-do-IQrAOz8KOzXeCsY13j8KzTXeCs8uCsAuwAouwQou
+wQouwQrBLgrANdY-Cj-ALj-ALjXWLgouwAouCsA11j-AOz-ALj-ANd4-Ljs-Lgo-LgouwAouCsAu
+Ci7ACi4hCi4hOy4hO8AhOz81-f3ZCjshCsAhLjXgCsU13grONd4KzDsKwDvACsA7wAouO8AKLjsu
+Ci4KOwrALgo11y7APy4hPwo11zsuwDsKLsA11z-AOz-ALgo14C4KPy7BOy4hCi4hCj8uCi7ACi4h
+wD8hwDsuITs-ITs-Nf392ArAOyEKwDXiCsQ13grONd4KzSEKwSEKOwohLjsKwC47wAouwDvALsA1
+2Ds-IcA-ITXYCjsuO8AuNdg-IcAKIcA14gouwAouOwouCj8uCi7ACi7AIT8uITsuITshwDshLjsh
+wDX9-dcKwSEKNeQKwzXeCs413grNOwrBOwrALjsKOy47wS4KO8AhLjs12T-BIT812QrAITsKNdk7
+PyEuPzXkLsAKLjsKLjs-Cjs-Ljs-LiE-LiE7LiE7IcA7PzvAPzsuNf391grCNeYKwjXeCs413grP
+OwrAO8AKO8s12iHAP8A12j-CNdo7wjXmP9M7P8A7wD87xDX9-dUKwTXoCsE13grONd4KzDsKwDvA
+CsA7wAo7yTXbITshNds-wTXbO8E16D-POz-AO8A-O8g1-f3UCsA16grANd4KzjXeCs07CsA7wAo7
+yzXcOz813CE-Ndw7wDXqIT8hwT8hwD-DOz-AO8A-O8w1-f3TCjXsCjXeCs413grNOwrBOwrAO8AK
+O8Y13Qo13T813Ts17D8hP8g7P8A7wD87wT87yTX9-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f3VP8E12j-DNcg-Ncw-wDXBPzXMPzX9-f39-f3YPzXA
+PzXYP8A1PzU-wDXHPzXLPzXAPzXAPzXMPzX9-f39-f3YPzXAPzU-NT-ANcA-wDXBP8E1wD-BNcQ-
+wTU-wTXGP8I1wD-ANcU-NcI-wjXAP8A1wD81P8A1P8I1-f39-f391j-BNcA-wDXBPzXAPzU-NcI-
+Ncc-wDU-NT-ANcc-NcE-NcA-NcU-wDXBPzXEPzU-wDXCPzX9-f39-f3YPzXCPzXCP8I1wD-ANcE-
+wDXGP8M1yD81wT81wD81xz81wD81wj-BNT81wz81-f39-f392D81wj81wj81xT81wj81xD81wz81
+xz81wT81wD81xD81wD81wD81wT81wD81PzXDPzX9-f39-f3YPzXCPzXDP8E1P8E1wD-BNcY-wzXJ
+P8A1wD-ANcY-wDXCP8A1wD-BNT81xD-ANf39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39xi7DNcMuwzXHLsI1LsA1wS41yi7BNeQuwzXDLsM1wy7DNcMu
+wzXILjXMLsA1wy41wi41yi41xi7BNdsuNf39-f3OLsA1wS7ANcEuwDUuNS7ANcYuNcMuNc4uNcAu
+NdouNcUuwTXALsA1wS7ANcAuwTXBLsE1LsE1wS7ANcEuwDXHLjXLLjXALjXCLjXPLjXGLjXALjXa
+LjX9-f39zi7ANS41LsA1wS7BNS7BNcYuNcMuNcAuwDXALsE1xS41wC41wC7ANcEuwTXALsA1wS7B
+NcYuNcUuwDXBLsA1wS7ANcEuwDXBLsA1wS7ANcEuwDXBLsA1xi7CNcAuwDXFLjXALjXALsE1wS7A
+NS41wC41wC7BNS7CNcQuNcAuNcAuwDXALjUuwDXALsA1wC7ANS41wS7ANcAuwjXALsA1wC41LsA1
+wC7BNf39-fsuwDXBLsA1wS7ANS41LsA1xi7BNcEuNcEuNcAuNcAuNcQuwTXDLjUuNcAuNS41wC41
+LjXILjXGLsE1wC7ANcEuwDXALsE1wS7ANcEuwDXBLsE1LsE1xy41wS41wC41xC7CNS41wC41wi41
+LjXALjUuNcMuNcYuwTXDLjUuwDXELjUuNS41LjUuNcAuNcAuNcEuNcAuNS7ANcEuNf39-f3BLsM1
+wy7DNccuNcMuNcEuNcAuNcAuNcQuNcMuwTUuNcAuNS7CNcAuwDXGLjXHLsM1wy7DNcMuwzXDLsM1
+yC41wS41wC41xC41wC41LjXALjXCLjUuNcAuNcAuwDXBLjXGLjXDLsE1LjXDLsE1LjUuNS41LsI1
+wC41wS7CNS41wy7ANf39-fwuNcMuNcEuNcMuNcYuNcMuNcEuNcAuwTXFLjXCLjXALjXALsE1LjXF
+LjXELjXHLjXDLjXBLjXDLjXBLjXDLjXBLjXDLjXHLjXBLjXALjXELjXALjUuNcAuNcIuNS41wC41
+wi41wC41xi41wi41wC41LjXCLjXALjUuNcEuNS41wy41wS41wi41xS41-f39-C7DNcMuwzXHLjXD
+LsA1LsE1LjXHLjXDLsE1wi41wC7BNS7BNcUuNcguwzXDLsM1wy7DNcMuwzXJLsA1wC7ANcUuNcAu
+NcAuwTUuNcAuNcAuwTUuwTXCLsA1xC41wy7BNS41wy7BNS41wS41wC7BNcEuwDXALsE1LjXCLsE1
+-f39-eQuNdIuwDX94i7ANf39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39xC7BNcEuwDXBLsE1xi7ANfEuNcguNdAuwTXALsE1wS7BNcUuNcsuNcwuNdIuNf39-f31LjXC
+LjXALjXCLjXFLjXzLjXILjXILjXFLjXCLjXALjXCLjXFLjXLLjXMLjXSLjX9-f399S41wi41xS41
+xS41wi7ANcAuNS7ANcUuwTXALsE1LjUuwDXALsA1wS7ANcAuwTXBLsE1LsE1wS7ANcAuwjXGLjXF
+LjXCLjXALjXCLjXELsI1wC7ANcUuwTXBLsA1wS7ANcAuNcAuNS7ANS41wS7ANcAuNS7ANS41wC41
+xC7BNcEuwDXBLsE1wC7ANf39-f3aLjXDLsA1wy41xC7CNS41wC41LsA1xi41wi41wi7ANcEuNcAu
+NS41wC41LjXALjUuNcIuNcAuNS41wC41wC41xy41xi41wi7BNcMuNcUuNcEuNcAuNcQuNcAuNS41
+wC41LjXALjUuNS41wC41LjUuNcIuNS7ANcEuNS41xS41wC41wi41LjXALjUuNcAuNf39-f3ZLjXF
+LjXCLjXFLjXBLjXALjUuNcguwDXALjXCLjXCLsI1LsI1LjXALjXALsA1wC41wC41LjXALjXALjXH
+LjXGLjXCLjXALjXCLjXFLjXBLjXALjXELjXALjUuNcAuNS41wC41LsA1wS41LjUuNcAuwTUuNcIu
+wDXGLjXALjXALsE1LjXALjUuwjX9-f392S41wi41wC41wi41xS41wS41wC41LjXKLjUuNcIuNcIu
+NcIuNcIuNcAuNcIuNS41wC41LjXALjXALjXGLjXHLjXCLjXALjXCLjXFLjXBLjXALjXELjXALjUu
+NcAuNS41wC41LjUuNcAuNcEuNS41wC41LjXCLjUuNcUuwTXALjXALjXALsE1LjX9-f393C41wy7A
+NcMuNcUuNcIuwDXALjXHLsE1wS7BNS41wy7BNcAuwTUuNcAuNS7BNcAuNcAuNcAuwDXCLsA1xC41
+xy41wi7BNcMuNcYuwDXALsA1xS7BNcEuwDXBLsA1wC41wC41LjXBLjXALsE1LjXCLjXALjXELjXD
+LsE1wi41wC7BNf39-f3ZLsE1xi7BNf3bLsE1xi7BNf3DLjXILsA1-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-d0uwDXBLjXGLsA1xi7ANcsuwDXBLjXGLsA1xS41wC41
+xS419C41-f39-f3mLjXALjXALjXHLjXFLjXALjXJLjXALjXALjXHLjXFLjXALjXFLjXhLjXQLjX9
+-f39-eYuNcIuwjUuNS7ANcAuNcUuNcwuNcIuwjUuNS7ANcAuNcUuNcAuNcQuwjXALsA1xi7BNcAu
+wDXALsE1wC41wC41wS41wC7BNcEuwDXBLsE1LsI1wC7ANcYuwDXFLsE1wS7ANcEuwTXALsA1-f39
+-fsuNcMuNcEuwDXCLjXFLjXMLjXDLjXBLsA1wi41xS41wC41xS41wS41wC41xC41wi41wC41LjXA
+LjUuNcAuNcAuNcEuNcAuNcIuNS41wy41wS41wC41xy41xC41wC41wi41LjXALjUuNcAuNf39-f36
+LjXDLjXBLjXDLjXALsI1LjXMLjXDLjXBLjXDLjXALsI1LjXALjXFLjXBLjXALjXELjXCLjXALjUu
+NcAuNS41wC41wC41wS41wC41wC7BNcAuwDXBLjXBLsI1xS7BNcQuNcAuNcAuwTUuNcAuNS7CNf39
+-f36LjXALjXALjXBLjXDLjXFLjXALjXJLjXALjXALjXBLjXDLjXFLjUuNcYuNcEuNcAuNcQuNcIu
+NcAuNS7BNcEuwTUuNcIuwTXALjXALjXCLjXALjXBLjXHLjXALjXELsE1wC41wC41wC7BNS41-f39
+-f3ALsA1wi7ANS41wy7ANcUuwDXCLjXGLsA1wi7ANS41wy7ANcQuwDXILsA1wC7ANcYuwTXALsA1
+wC41xS41LjXCLjXDLsE1LsE1wi7ANcAuwTXFLsE1xC41wy7BNcIuNcAuwTX9-f39-douNf3DLjXD
+LsA1xS415S41yC7ANf39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39-f39
+-f39-f39-f39-f39-f39-f39-f39-f39-doAAAAAAAAAAQ==
+:: map/.info.pod
+--[[pod,created="2025-01-18 05:06:49",modified="2025-12-15 18:11:28"]]
+:: map/0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTE4IDAzOjQ4OjA0Iixtb2RpZmllZD0iMjAyNS0w
+Mi0xOCAwMjowODozNCIscmV2aXNpb249NzEzOV1dbHo0AJkBAABdEAAA8Ah7e2JtcD11c2VyZGF0
+YSgiaTE2IiwzMgMAUCIwMDA5BAAfYQQAZA_AACkfMAQAJBdhBAAfMAQAgxMzCAAfMhAABAAIABMx
+BAAPGAANAAwAE2IQAA8EABUSYTcABTgAGzEIAAQEAA4gAA0IABQxDAAPBAAZSDIwMDH4ABNhVAAX
+YtgAFzkEAB8xCAAJDwQAIBdieAAfOUwAABsxkAAPCAAFBLgABMgADwQA--------GB9hTAA8CAQA
+HzAEABAHKAAXM2wHCAwAANgHEjMMACcxMyAAEzEUABcyGAAnOWEEAB8wBAAbFjFUAA8MAAoOFAAG
+DAAPBAAoEDEICR9iVAAAFzIMAAgIAA4MAA_AACsISAEETAgTOQgABGQICBQACHgJBCAADwQAKQhU
+AAfgAQkYAAgIAAwUAA8EAC0TYvgAC4wBJjFhZAAnMWF0AAcsAAQgAA8EAP---w7xCiIpLGhpZGRl
+bj1mYWxzZSxwYW5feD0tNDUKAPIBeT0tMTcxLHRpbGVfaD0xNgoAEHcKAIB6b29tPTF9fQ==
+:: sfx/.info.pod
+--[[pod,created="2025-01-18 05:06:49",modified="2025-12-15 18:11:28"]]
+:: sfx/0.sfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTE4IDAzOjQ4OjA1Iixtb2RpZmllZD0iMjAyNS0w
+Mi0xOCAwMjowODozNCIscmV2aXNpb249NzAyNl1dbHo0AKAAAAALCgAA-zBweHUAAygAAAQABA9A
+EAIOAAGgASACoA4ADxAADfDKAQIDQA8PkAQFBgdADJAICQoLQAyQDwwPDQ8ODEAM8P8BAOv-J6oB
+EAYPIBABIAEgAfAAAhACDhABIA8hIAEwD0Dwww8oD--wxg-4Cg--D4AP9w8NAfAJARAGDjAA----
+--_9H-8BAKzPyA9AAA8QQP--sPD-AQD-6lD-----KQ==
+:: title.lua
+b64$LS1bW3BvZF9mb3JtYXQ9InJhdyIsY3JlYXRlZD0iMjAyNS0wMS0yMSAwNzo1MTo1MSIsbW9k
+aWZpZWQ9IjIwMjUtMDItMTggMDI6MDg6MzQiLHJldmlzaW9uPTQ1NzNdXQotLSB0aXRsZS5sdWEK
+Ci0tIHNpbXBsZSwgc29saWQgY29sb3VycyBmb3IgdGl0bGUKLS0gKGxvb2sga2luZGEgbmljZSB3
+aGVuIHBhcnRzIG9mIGxldHRlcnMgYXJlIG9jY2FzaW9uYWxseSBtaXNzaW5nKQpmdW5jdGlvbiBn
+ZW5fdGl0bGVfcGFsKCkKCWNvbHM9e30KCWNvbHNbMF0gPSBybmR7Niw3LDE0LDE3LDIyLDIzLDMx
+fSAtLSBicmlnaHQKCWNvbHNbMV0gPSBybmR7MCwxLDV9IC0tIGRhcmsgKGFuZCBzb21ldGltZXMg
+c2FtZSBhcyBibGFjayBiYWNrZ3JvdW5kKQoJY29sc1syXSA9IHJuZHs4LDksMTAsMTEsMTIsMTMs
+MTR9IC0tIGNvbG91cmZ1bAplbmQKCgpmdW5jdGlvbiBpbml0X3RpdGxlKCkKCW1vZGUgPSAidGl0
+bGUiCglsb2FkX3BhZ2Uocm5kKDEwMDAwMDApXDEpCglnZW5fdGl0bGVfcGFsKCkKZW5kCgoKYnB0
+ID0gdXNlcmRhdGEoInU4IiwzNjAsODApCmZ1bmN0aW9uIGRyYXdfdGl0bGUoKQoKCWNscyhwYWdl
+X2NvbCkKCWxvY2FsIHEgPSAodHQqNSklMTYKCQoJLS0gY29uc3RhbnQgbW92ZW1lbnQgaW4gdGl0
+bGUgKHVubGlrZSBhdXRvcGxheSkKCXB4ID0gZmxyKGNvcyh0dC8zMDApKjUwKQoJcHkgPSBmbHIo
+c2luKHR0LzMwMCkqNTApCgoJbG9jYWwgbnVtX2NvbHMgPSAjY29scysxCglmb3IgeD0tMTgwKyhx
+XDQpLDE3OSw0IGRvCgkJZm9yIHk9LTQwKyhxJTQpLDQwLDQgZG8KCQkJYnB0OnNldCh4KzE4MCx5
+KzQwLGNvbHNbZih4LHkpJW51bV9jb2xzXSkKCQllbmQKCWVuZAoJCglibGl0KGJwdCxuaWwsMCww
+LDI0MC0xODAsMjArMTYpCglpZiAodHQgPiAyMDApIHRoZW4KCQlsb2FkX3BhZ2Uocm5kKHBhZ2Vf
+bWF4KVwxKQoJZW5kCi0tCi0tCQoJcGFsdCg3LHRydWUpCglwYWwoMSxwYWdlX2NvbCkKLS0JY2xz
+KDIpCgltYXAoMCwwLC04LDAsMzIsOCkKCQoJcGFsdCg3LCBmYWxzZSkKCXBhbCgxLDEpcGFsKDcs
+NykKCQoJcHJpbnQoIlByZXNzIFwxNTEgdG8gU3RhcnQiLCAyNDAtODUvMiwgMTcwLDcpCgoJY3Vy
+c29yKDk0LDIyMCw1KQoJcHJpbnQoIiAgICAgII5cMTUxIEZsaXAgUGFnZXMgLyBcMTM5XDE0NVwx
+NDhcMTMxIHRvIEFkanVzdCBQYXJhbWV0ZXJzXHxpIikKCXByaW50KCIgICAgICAgICBbU10gZm9y
+IHNjcmVlbnNob3QgLyBbQl0gdG8gYm9va21hcmsgcGFnZVx8aSIpCglwcmludCgiICAgICAgICAg
+ICAgQ3RybC1DLCBDdHJsLVYgdG8gY29weS9wYXN0ZSBhIHBhZ2UiKQoJCmVuZAoKZnVuY3Rpb24g
+dXBkYXRlX3RpdGxlKCkKCglpZiAoYnRucCg0KSBvciBidG5wKDUpIG9yIGtleXAic3BhY2UiKSB0
+aGVuCgkJbW9kZSA9ICJnYWxsZXJ5IgoJCWJyb3dzZV9ib29rbWFya3MgPSBmYWxzZQoJCWlmIChz
+dGFydF9wYWdlKSB0aGVuCgkJCWxvYWRfcGFnZShzdGFydF9wYWdlKQoJCQlweCA9IHN0YXJ0X3B4
+IG9yIHB4CgkJCXB5ID0gc3RhcnRfcHkgb3IgcHkKCQkJcHgxLHB5MSA9IHB4LHB5CgkJZWxzZQoJ
+CQlsb2FkX3BhZ2Uocm5kKHBhZ2VfbWF4KVwxKQoJCWVuZAoJCQoJZW5kCgkKZW5k
+:: [eoc]

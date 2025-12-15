@@ -1,0 +1,87 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: sfx/
+:: main.lua
+--[[pod_format="raw",created="2025-01-05 03:01:59",modified="2025-01-06 02:09:45",revision=70]]
+
+show_date = false
+show_local = true
+
+function _init()
+	
+	window{
+		width=72,
+		height=8,
+		has_frame=false,
+		resizeable=false
+	}
+	
+	-- when click anywhere in window, tell wm can grab it and move around
+	-- also: set cursor to grab when hovering over window
+	gui = create_gui{
+		click = function() send_message(3, {event="grab"}) end,
+		cursor="grab",
+		
+		-- toggle timezone, date / time
+		tap = function(self,msg)
+			if (msg.mx > 48) then
+				show_local = not show_local
+			else
+				show_date = not show_date
+			end
+		end
+	}
+end
+
+function _update()
+	gui:update_all()
+end
+
+
+function _draw()
+
+	cls(0)
+	local format = show_local and "%Y-%m-%d %H:%M:%S" or nil
+
+	if show_date then
+		print(date(format):sub(1,10),0,0,13)
+	else
+		print(date(format):sub(12),4,0,13)
+	end
+
+	print("\014"..(show_local and "local" or " gmt"),52,1,16)
+
+	-- wm draw mask; colour 0 is transparent
+	-- can still interact with any pixel though
+	poke(0x547d,0xff) 
+
+end
+
+:: .info.pod
+--[[pod,created="2025-01-05 03:02:25",modified="2025-12-15 18:11:28",runtime=13,workspaces={{location="main.lua#52",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
+:: gfx/.info.pod
+--[[pod,created="2025-01-05 03:04:09",modified="2025-12-15 18:11:28"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTA1IDAzOjAxOjU5Iixtb2RpZmllZD0iMjAyNS0w
+MS0wNiAwMjowOTo0NSIscmV2aXNpb249NDldXWx6NAB_AAAAEjEAAPMhe1swXT17Ym1wPXB4dQBD
+IBAQBPBWBxAHwBfQF8AHEAfwVixmbGFncz0wLHBhbl94CADLeT0wLHpvb209OH0sPgAf8DEA----
+------------------------------------------------------------11BtPTh9fQ==
+:: map/.info.pod
+--[[pod,created="2025-01-05 03:04:09",modified="2025-12-15 18:11:28"]]
+:: map/0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTA1IDAzOjAxOjU5Iixtb2RpZmllZD0iMjAyNS0w
+MS0wNiAwMjowOTo0NSIscmV2aXNpb249NTBdXWx6NABoAAAAWBAAAPAIe3tibXA9dXNlcmRhdGEo
+ImkxNiIsMzIDAC8iMAEA--------------------_-EIIiksaGlkZGVuPWZhbHNlLHBhbl94PTAI
+ANJ5PTAsdGlsZV9oPTE2CgAQdwoAgHpvb209MX19
+:: sfx/.info.pod
+--[[pod,created="2025-01-05 03:04:09",modified="2025-12-15 18:11:28"]]
+:: sfx/0.sfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTA1IDAzOjAxOjU5Iixtb2RpZmllZD0iMjAyNS0w
+MS0wNiAwMjowOTo0NSIscmV2aXNpb249NTBdXWx6NACgAAAACwoAAP8wcHh1AAMoAAAEAAQPQBAC
+DgABoAEgAqAOAA8QAA3wygECA0APD5AEBQYHQAyQCAkKC0AMkA8MDw0PDgxADPD-AQDr-yeqARAG
+DyAQASABIAHwAAIQAg4QASAPISABMA9A8MMPKA--8MYP_AoP-w_AD-cPDQHwCQEQBg4wAP------
+vR--AQCsz8gPQAAPEED--7Dw-wEA-_pQ-----yk=
+:: [eoc]

@@ -1,0 +1,143 @@
+picotron cartridge // www.picotron.net
+version 2
+
+:: gfx/
+:: map/
+:: sfx/
+:: main.lua
+--[[pod_format="raw",created="2025-09-09 21:06:30",modified="2025-09-09 22:35:57",revision=61]]
+--[[
+	
+	Load Cartridge / New Cartridge / Shutdown / Reboot
+	
+	-> when unsaved changes exist, need to confirm that action
+	
+	confirm.p64 might handle other confirmations later, but
+	generally want to handle them inside the program doing
+	the operation.
+
+	follow convention: confirmation always on the right (cancel on left)
+	also: should only ever be two choices
+
+]]
+
+on_event("save_working_cart_files_completed", function(msg)
+	printh("@@@ [confirm.p64] save_working_cart_files_completed "..pod(msg))
+	if not msg.pwc_unsaved_changes then
+		if (env_title == "Reboot") send_message(2, {event="reboot"})
+		if (env_title == "Shutdown") send_message(2, {event="shutdown"})
+		exit() -- ship is going down, but go down like a gentleman
+	end
+end)
+
+function perform_confirmed_action()
+--	printh("performing "..env_title)
+--	printh(pod(env()))
+	if (env_title == "Reboot") send_message(2, {event="reboot"})
+	if (env_title == "Shutdown") send_message(2, {event="shutdown"})
+	if (env_title == "Load") create_process("/system/util/load.lua", { argv = {env().cart_to_load}})
+	if (env_title == "New Cart") then
+		create_process("/system/apps/filenav.p64",
+		{ 
+			argv = {env().cart_path},
+			intention = "new_cartridge",
+			-- intention_filename = p2, -- pass along if there is one
+			window_attribs={autoclose=true} -- close after processing intention; the wm window stack is the intention stack!
+		})
+	end
+	if (env_title == "Close") then
+		-- to do: remove need for these 2 separate messages (relies on message processing order so that confirm_close_window can complete)
+		send_message(env().proc_id, {event="confirm_close_window"}) -- placeholder event
+		send_message(env().proc_id, {event="exit"})
+		--send_message(3, {event="close_window", proc_id = env().proc_id})
+	end
+
+	exit()
+end
+
+
+function _init()
+
+	env_title = env().title or ""
+	env_prompt = env().prompt or "Do Nothing?"
+	
+	if (env_title == "Reboot" or env_title == "Shutdown" or env_title == "Load" or env_title == "New Cart") then
+
+		-- check if there are unsaved changes; both are blocking
+		send_message(3, {event="save_working_cart_files"}, true) -- blocking
+
+		local unsaved_changes = send_message(3, {
+			-- reboot / shutdown prompt ask for confirmation when any single file editors have unsaved changes
+			-- load / new cart only needs confirmation when pwc has unsaved changes (/ram/cart file edited since last save) 
+			event = (env_title == "Reboot" or env_title == "Shutdown") and "any_unsaved_changes" or "pwc_unsaved_changes"
+		}, true).result
+
+		if not unsaved_changes then
+			perform_confirmed_action()
+		end
+
+	end
+	
+	window{
+		width=140,height=50,
+		title="Confirm "..env_title,
+		x = 240-70,
+		y = 135-25
+	}
+	
+	gui = create_gui()
+	
+	gui:attach_button{
+		x=16,y=-6,justify="left",vjustify="bottom",
+		label="Cancel",
+		border=0x0e0d,
+--		highlight = 0x0707,
+		tap=function()
+			exit()
+		end
+	}
+	
+	gui:attach_button{
+		x=-16,y=-6,justify="right",vjustify="bottom",
+		label="  OK  ",
+		border=0x0e0d,
+--		highlight = 0x0707,
+		tap = perform_confirmed_action
+		
+	}
+end
+
+function _draw()
+	cls(6)
+	print(env_prompt,10,10,1)
+	gui:draw_all()
+end
+
+function _update()
+	gui:update_all()
+end
+:: .info.pod
+--[[pod,author="zep",created="2025-09-09 21:06:06",icon=userdata("u8",16,16,"0000000101010101010101010100000000000107070707070707070707010000000107121212121212121212120701000107121212171717171717121212070101071212171717171717171712120701010712121717121212171717121207010107121212121217171717121212070101071212121212171712121212120701010712121212121212121212121207010107121212121217171212121212070101071212121212171712121212120701011d0712121212121212121212071d01011d1d070707070707070707071d1d0100011d1d1d1d1d1d1d1d1d1d1d1d01000000011d1d1d1d1d1d1d1d1d1d01000000000001010101010101010101000000"),modified="2025-12-15 18:11:28",notes="Choose wisely\n\nI will not ask you a second time",runtime=21,title="Confirm",version="",workspaces={{location="main.lua#23",workspace_index=1},{location="gfx/0.gfx",workspace_index=2},{location="map/0.map",workspace_index=3},{location="sfx/0.sfx",workspace_index=4}}]]
+:: gfx/.info.pod
+--[[pod,created="2025-09-09 21:06:06",modified="2025-12-15 18:11:28"]]
+:: gfx/0.gfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTE3IDEwOjM1OjQ4Iixtb2RpZmllZD0iMjAyNS0w
+MS0xNyAxMDozNzo0NCIscmV2aXNpb249Ml1dbHo0AH4AAAASMQAA8yF7WzBdPXtibXA9cHh1AEMg
+EBAE8FYHEAfAF9AXwAcQB-BWLGZsYWdzPTAscGFuX3gIAMt5PTAsem9vbT04fSw_AB-wMQD-----
+-----------------------------------------------------------XUG09OH19
+:: map/.info.pod
+--[[pod,created="2025-09-09 21:06:06",modified="2025-12-15 18:11:28"]]
+:: map/0.map
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTAxLTE3IDEwOjM1OjQ4Iixtb2RpZmllZD0iMjAyNS0w
+OS0wOSAyMTowNjowNiIscmV2aXNpb249Ml1dbHo0AEwAAABQAAAA8Rx7e2JtcD1weHUATIAgIAD-
+AAD---8DLGhpZGRlbj1mYWxzZSxwYW5feD0wCADSeT0wLHRpbGVfaD0xNgoAEHcKAIB6b29tPTF9
+fQ==
+:: sfx/.info.pod
+--[[pod,created="2025-09-09 21:06:06",modified="2025-12-15 18:11:28"]]
+:: sfx/0.sfx
+b64$LS1bW3BvZCxjcmVhdGVkPSIyMDI1LTA3LTMxIDA4OjMwOjI4Iixtb2RpZmllZD0iMjAyNS0w
+Ny0zMSAwODozMDoyOCIscmV2aXNpb249MF1dbHo0AKAAAAALCgAA-zBweHUAAygAAAQABA9AEAIO
+AAGgASACoA4ADxAADfDKAQIDQA8PkAQFBgdADJAICQoLQAyQDwwPDQ8ODEAM8P8BAOv-J6oBEAYP
+MBABIAEgAfAAAhACDhABIA8hIAEwD0Dwww8oD--wxg-4Cg--D4AP9w8NAfAJARAGDjAA------_9
+H-8BAKzPyA9AAA8QQP--sPD-AQD-6lD-----KQ==
+:: [eoc]
