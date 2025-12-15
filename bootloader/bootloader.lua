@@ -1,4 +1,4 @@
---[[pod_format="raw",author="Astralsparv",created="2025-12-14 17:06:58",modified="2025-12-14 17:21:50",notes="",revision=8,title="Bootloader",version="1.1"]]--[[
+--[[pod_format="raw",author="Astralsparv",created="2025-12-14 17:06:58",modified="2025-12-15 18:11:24",notes="",revision=11,title="Bootloader",version="1.1b"]]--[[
 	Bootloader
 	v1.1
 	@astralsparv
@@ -54,6 +54,9 @@ else
 		store("/distributions/bootinto.txt","bios")
 		_signal(34)
 	else
-		boot()
+		local ok, err = pcall(boot)
+		if not ok then
+			webWarning("custom_boot.lua error: " .. tostring(err))
+		end
 	end
 end
